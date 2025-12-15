@@ -1,0 +1,18 @@
+Food,10.0,Lunch
+Food,45.0,Dinner
+Rent,800.0,House
+Food,20,Dinner
+Utilities,45.0,Phone Bill
+Shopping,60.0,Cake
+Shopping,10.0,Pen
+Food,2.0,Chocolate
+Food,25.0,cake
+Utilities,100.0,Gas
+Shopping,37.0,Bag
+Rent,200.0,Car
+Food,15.0,Tea
+Food,20.5,Lunch
+Rent,850,Monthly apartment rent
+Utilities,95,Electricity bill
+Shopping,150,Clothes
+Food,30.0,Icecream
