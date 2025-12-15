@@ -116,7 +116,7 @@ try:
     background_label.place(x=0, y=0, relwidth=1, relheight=1)
 except Exception as e:
     print("Background image error:", e)
-    background_label = tk.Label(root, bg="#FFFFFF")
+    background_label = tk.Label(root, bg="#FFFF8F")
     background_label.place(x=0, y=0, relwidth=1, relheight=1)
 main_menu()
 root.mainloop()
