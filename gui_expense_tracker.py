@@ -14,7 +14,7 @@ def save_expense(category, amount, description):
     try:
         amount = float(amount)
     except ValueError:
-        messagebox.showerror("Invalid Input", "Amount must be a number.")
+        messagebox.showerror("Invalid Input", "Amount must be a number.") 
         return
     with open(FILENAME, "a") as file:
         file.write(f"{category},{amount},{description}\n")
