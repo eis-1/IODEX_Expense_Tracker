@@ -16,6 +16,7 @@ Scope and constraints
 ## Objectives
 
 - Functional
+
   - Allow the user to add expense entries consisting of a category, an amount, and an optional description.
   - Show all recorded expenses in a tabular view and compute the total spent.
   - Produce a category-wise bar chart of total expenses for simple analysis.
@@ -30,44 +31,109 @@ Scope and constraints
 
 Major components
 
-- `gui_expense_tracker.py` — Application entry point and the GUI code.
-  - Renders the Tkinter window, menus, and interaction flows.
-  - Implements functions for adding an expense, viewing expenses, analyzing expenses, and resetting storage.
+- `gui_expense_tracker.py` — Application entry point.
 
-- `expenses.txt` — Persistent storage.
-  - Each expense is stored as a single line in the file in the format: `Category,Amount,Description`.
+  - Simplified launcher that initializes and runs the application.
+  - Imports the modular components below.
 
-- Third-party libraries used for analysis and presentation.
-  - `pandas` is used to load the file and aggregate amounts by category.
-  - `matplotlib` and `seaborn` are used to generate the bar chart embedded in the GUI.
+- `gui.py` — User Interface module (class-based).
+
+  - `ExpenseTrackerGUI` class encapsulates all Tkinter UI logic.
+  - Separated from business logic for improved testability and maintainability.
+  - Methods for each screen: `main_menu()`, `view_expenses()`, `analyze_expenses()`, etc.
+
+- `storage.py` — Data Persistence module.
+
+  - `append_expense(category, amount, description, path)` — Add a single expense.
+  - `load_expenses(path)` — Load all expenses from file.
+  - `get_total_spent(path)` — Calculate total amount spent.
+  - `clear_expenses(path)` — Delete all expense records.
+  - `file_exists(path)` — Check if storage file exists.
+  - All functions accept optional `path` parameter for flexibility and testability.
+  - Uses Python's `csv` module for robust CSV parsing and writing.
+
+- `analysis.py` — Data Analysis module.
+
+  - `get_category_totals(path)` — Aggregate expenses by category.
+  - `create_category_chart(path)` — Generate matplotlib figure for plotting.
+  - `get_summary_stats(path)` — Compute summary statistics.
+  - Separated from GUI to enable independent testing and reuse.
+
+- `test_storage.py` — Comprehensive unit test suite.
+
+  - 39 tests covering parsing, numeric coercion, and storage functions.
+  - Uses pytest for test automation and validation.
+  - Tests edge cases: commas in descriptions, quotes, newlines, special characters.
+
+- `expenses.txt` — Persistent storage (CSV format).
+
+  - Each expense is stored as: `Category,Amount,Description`.
+  - Uses proper CSV quoting to handle special characters in fields.
+
+- Third-party libraries for analysis and visualization:
+  - `pandas` — Data loading and aggregation.
+  - `matplotlib` and `seaborn` — Chart generation and embedding in GUI.
 
 Data flow
 
-1. User adds an expense via the GUI. The entry is appended to `expenses.txt` as a newline in CSV-like format.
-2. Viewing reads `expenses.txt`, parses each line by splitting on commas, and populates a `ttk.Treeview` table in the GUI.
-3. Analysis reads `expenses.txt` with `pandas.read_csv`, coerces `Amount` to numeric, groups by `Category`, and plots the aggregated totals.
+1. User adds an expense via the GUI. The entry is written to `expenses.txt` using `storage.append_expense()`.
+2. Viewing reads `expenses.txt` using `storage.load_expenses()`, which properly parses CSV format.
+3. Analysis uses `analysis.create_category_chart()` to aggregate and visualize expenses.
+4. All data operations are separated from UI logic and can be tested independently.
 
 ## Design decisions and architecture
 
 Key choices
 
-- Plain-text file for persistence
-  - Rationale: simplicity and minimal setup for academic demonstration and grading.
-  - Trade-offs: no atomic transactions, limited handling of delimiters inside fields, and limited performance for large datasets.
+- Plain-text CSV file for persistence
 
-- Single-file GUI implementation
-  - Rationale: keeps the project easy to run and review.
-  - Trade-offs: reduced modularity and testability; business logic is mixed with UI code.
+  - Rationale: simplicity, minimal setup, and human-readable format.
+  - Implementation: Uses Python's `csv` module for robust parsing and writing.
+  - Benefit: Properly handles commas, quotes, and newlines in field values.
+
+- Modular architecture with separated concerns
+
+  - Rationale: Improved testability, maintainability, and code reuse.
+  - Structure:
+    - `storage.py`: Data persistence (testable without GUI).
+    - `analysis.py`: Data analysis (reusable across interfaces).
+    - `gui.py`: User interface (class-based, focused on presentation).
+    - `gui_expense_tracker.py`: Minimal entry point.
+  - Benefit: Each module can be tested and maintained independently.
+
+- Storage abstraction with path parameters
+
+  - Rationale: Enables flexible file handling and testability.
+  - Implementation: All storage functions accept optional `path` parameter.
+  - Benefit: Allows unit tests to use temporary files without affecting production data.
+
+- Comprehensive unit testing with pytest
+
+  - Rationale: Validate parsing, numeric coercion, and edge cases.
+  - Coverage: 39 tests covering:
+    - CSV parsing (commas, quotes, newlines, special characters).
+    - Numeric validation and coercion (type checking, bounds, precision).
+    - Storage operations (append, load, clear, totals).
+    - Edge cases (long descriptions, malformed rows, 100+ expenses).
+  - Benefit: Catch bugs early and prevent regressions.
 
 - Use of `pandas` + `seaborn` for analysis and plotting
-  - Rationale: concise aggregation and high-quality plotting with minimal code.
-  - Trade-offs: larger dependency footprint; heavier than a lightweight custom aggregation + `matplotlib` only.
+  - Rationale: Concise aggregation and high-quality plotting with minimal code.
+  - Trade-offs: Larger dependency footprint; heavier than custom implementations.
 
-Alternatives considered
+Completed improvements
 
-- CSV module for safer parsing and quoting (recommended next step).
-- SQLite for robust local storage and better query performance.
-- Refactoring into modules and classes to separate GUI, storage, and analysis logic (recommended for maintainability and unit testing).
+✅ **CSV module integration** — Replaced naive splitting with Python's `csv` module.  
+✅ **Modular refactoring** — Separated GUI, storage, and analysis into distinct modules.  
+✅ **Storage abstraction** — Added path parameter to all storage functions for flexibility.  
+✅ **Unit test suite** — Created 39 comprehensive tests with pytest.
+
+Future considerations
+
+- SQLite for robust local storage and atomic writes.
+- Import/export features (CSV/JSON) and backups.
+- Custom categories and UI preferences configuration.
+- Web-based interface with Flask/FastAPI and authentication.
 
 ## Technologies and tools
 
@@ -127,16 +193,19 @@ Notes
 Primary workflows
 
 - Add an expense
+
   1. Launch the app.
   2. Click `Add Expense` and choose a category (the project includes `Food`, `Rent`, `Utilities`, `Shopping`).
   3. Enter an `Amount` (numeric) and an optional `Description` and click OK.
   4. The entry is appended to `expenses.txt` immediately.
 
 - View all expenses
+
   1. Click `View All Expenses` from the main menu.
   2. The table shows rows parsed from the storage file and displays the total spent.
 
 - Analyze expenses
+
   1. Click `Analyze Expenses` to see a bar chart of total spent per category.
   2. The chart is generated by loading `expenses.txt` with `pandas` and plotting totals using `seaborn`.
 
@@ -151,65 +220,84 @@ Behavioral notes
 ## Features
 
 - Add expense entries with category, amount (numeric), and description.
+- **Robust CSV storage** — Descriptions can contain commas, quotes, and special characters.
 - Persistent storage via `expenses.txt` (append-on-save behavior).
 - Tabular view of stored expenses with computed total.
 - Category-wise aggregation and embedded bar chart for basic analysis.
 - Reset/clear saved expenses from the GUI.
 - Optional background image display using `photo1.jpg`.
+- **Comprehensive unit tests** — 39 tests validating parsing, numeric coercion, and edge cases.
+- **Modular design** — Separate modules for storage, analysis, and GUI (testable and reusable).
 
 ## Limitations and known issues
 
-- Storage format
-  - The file is CSV-like but the current parsing is a simple `split(',')`. Commas inside descriptions are not supported and will break parsing.
-
 - Concurrency and atomicity
-  - Appending to a plain text file is not protected against concurrent writes. The app is single-user, so this is acceptable for local use but not for multi-user scenarios.
 
-- Test coverage
-  - There are no automated tests included in the repository.
+  - Appending to a plain text file is not protected against concurrent writes.
+  - The app is single-user by design, so this is acceptable for local use.
+  - Recommendation: Use SQLite for multi-user or high-concurrency scenarios.
 
-- Architecture
-  - GUI, persistence, and analysis logic are implemented together in `gui_expense_tracker.py`, making unit testing and maintenance harder.
+- Database
+
+  - Storage is file-based (CSV format) rather than database-backed.
+  - Good for: Small datasets, local use, human-readable data.
+  - Consider SQLite if: Concurrent writes, complex queries, or atomic transactions are needed.
 
 - Input validation
-  - Validation is minimal (amount numeric); categories are currently hard-coded with no ability to add custom categories from the UI.
+
+  - Validation is minimal (amount numeric).
+  - Categories are hard-coded; no ability to add custom categories from UI.
+  - Future: Add custom category support and enhanced validation.
 
 - Desktop-only
-  - Despite the requested project type, this implementation is a desktop GUI application, not a web application.
+  - This is a desktop GUI application, not a web application.
+  - Future: Web version could be implemented with Flask/FastAPI backend.
 
 ## Future work and improvements
 
-Short-term (recommended immediate tasks)
+✅ **Completed**
 
-- Replace naive splitting with Python's `csv` module (handle quoting and commas in descriptions).
-- Refactor code into modules: `storage.py`, `gui.py`, `analysis.py` to separate concerns and enable unit testing.
-- Add a `storage` abstraction with functions: `load_expenses(path)`, `append_expense(...)`, `clear_expenses(path)` and unit tests for parsing edge cases.
-- Add a small test suite (use `pytest`) to validate parsing, numeric coercion, and storage functions.
+- ✅ Replace naive splitting with Python's `csv` module.
+- ✅ Refactor code into modules: `storage.py`, `gui.py`, `analysis.py`.
+- ✅ Add storage abstraction with `load_expenses(path)`, `append_expense(...)`, `clear_expenses(path)`.
+- ✅ Add unit test suite (39 tests) with pytest.
 
-Medium-term
+Remaining recommendations
 
-- Migrate storage to SQLite with a simple schema (id, category, amount, description, timestamp) to provide atomic writes and SQL-friendly queries.
-- Add import/export features (CSV/JSON) and backups.
-- Allow custom categories and preserve UI preferences in a small config file.
+**Medium-term**
 
-Long-term
+- Migrate storage to SQLite with schema (id, category, amount, description, timestamp).
+- Add import/export features (CSV/JSON) and automated backups.
+- Allow custom categories and preserve UI preferences in config file.
+- Add date/time tracking for each expense.
 
-- If a web-based interface is required, implement a server component (Flask or FastAPI) that exposes APIs for CRUD operations and moves persistence to SQLite. A web UI can then be implemented separately; this requires authentication considerations and a decision about hosting/sync.
+**Long-term**
+
+- Implement web-based interface with Flask or FastAPI.
+- Add user authentication and cloud synchronization.
+- Multi-device support with backend API.
+- Reporting and advanced analytics features.
 
 ## Learning outcomes
 
 From implementing and reviewing this project, expected technical gains include:
 
-- Practical experience building a desktop GUI with Tkinter and `ttk` widgets.
-- File I/O patterns for simple persistence and understanding their limitations.
-- Using `pandas` for lightweight data loading and aggregation.
-- Embedding `matplotlib`/`seaborn` plots in a Tkinter GUI via `FigureCanvasTkAgg`.
-- Basic input validation and user feedback with `tkinter.messagebox`.
+- **Practical desktop GUI development** with Tkinter and `ttk` widgets.
+- **File I/O patterns** for data persistence and understanding their tradeoffs.
+- **CSV handling** with Python's `csv` module for robust data parsing.
+- **Modular design** principles — separating concerns between data, logic, and presentation.
+- **Unit testing** with pytest — writing testable code and comprehensive test suites.
+- **Data aggregation and visualization** with `pandas`, `matplotlib`, and `seaborn`.
+- **Class-based architecture** for GUI components and improved maintainability.
+- **Type hints and documentation** for clearer code intent.
+- **Error handling and validation** for robust user input processing.
 
-Suggested additional learning outcomes if refactoring to an OOP design
+Additional learning outcomes from refactoring
 
-- Designing clear interfaces and separation of concerns between GUI, storage, and analysis.
-- Writing unit tests for non-GUI logic and using dependency injection for testability.
+- Designing clear interfaces and separation of concerns.
+- Writing unit tests for non-GUI logic using dependency injection (path parameters).
+- Structuring testable code that doesn't depend on global state.
+- Documenting APIs and expected behavior through docstrings.
 
 ## License
 

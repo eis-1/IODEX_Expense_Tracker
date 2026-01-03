@@ -15,4 +15,5 @@ Food,20.5,Lunch
 Rent,850,Monthly apartment rent
 Utilities,95,Electricity bill
 Shopping,150,Clothes
-Food,30.0,Icecream
+Food,30.0,IcecreamShopping,100.0,Book
+Shopping,100.0,Book
