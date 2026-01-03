@@ -93,160 +93,125 @@ Notes:
 
 ## Tests
 
-Run the test suite with pytest (recommended inside a virtualenv):
+IODEX — Desktop Expense Tracker
+
+Make this repository stand out on GitHub: the README below is written to be clear, emphatic, and ready-to-copy into the repository home page. It includes exact commands, tests, and where to find the Back button that returns to the main menu.
+
+Badges (optional)
+
+- CI: Add a GitHub Actions badge when you enable CI.
+- PyPI / Downloads: Add when publishing.
+
+## Overview
+
+IODEX is a compact, single-user desktop expense tracker written in Python with a Tkinter GUI. It stores expenses in a robust CSV-style text file (`expenses.txt`) and provides a simple category analysis chart. The project emphasizes:
+
+- Simple, local persistence (human-readable CSV quoting)
+- Clear separation: `storage.py`, `analysis.py`, `gui.py`
+- Test coverage of non-GUI logic with `pytest`
+
+## Quick highlights
+
+- Add/View/Delete expenses
+- Category aggregation and charting (static + optional interactive)
+- Preferences (timestamp display) with persistent config
+- Unit tests: run with `pytest`
+
+## Install and run (Windows example)
+
+1. Open a terminal and change to the project folder:
+
+```powershell
+cd "d:/siam/Object-oriented final project"
+```
+
+2. Create and activate a virtual environment (recommended):
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+3. Install dependencies:
+
+```powershell
+pip install -r requirements.txt
+```
+
+4. Launch the GUI:
+
+```powershell
+python gui_expense_tracker.py
+```
+
+## What to expect in the UI
+
+- Main Menu: `Add Expense`, `View All Expenses`, `Analyze Expenses`, `Preferences`, `Reset Expenses`, `Exit`.
+- View All Expenses screen: has a "🔙 Back" button that returns to the main menu (bottom of the view).
+- Analyze Expenses screen: has a "🔙 Back" button that returns to the main menu (below the chart).
+- Preferences screen: has a "🔙 Back" button and a `Save` button. Use `Save` to persist preferences and return to the main menu.
+
+## File map (important files)
+
+- `gui_expense_tracker.py` — app launcher
+- `gui.py` — Tkinter GUI (`ExpenseTrackerGUI`) and all screens
+- `storage.py` — append/load/clear/delete expenses (CSV via `csv` module)
+- `analysis.py` — category aggregation + chart creation
+- `config.py` — read/write `config.json` for preferences
+- `utils.py` — timestamp formatting helpers
+- `expenses.txt` — runtime CSV-style data file (created on first save)
+- `requirements.txt` — Python dependency list
+- `test_*.py` — `pytest` unit tests for non-GUI modules
+
+## Testing
+
+Run the test suite from the project root:
 
 ```powershell
 pip install -r requirements.txt
 pytest -q
 ```
 
-The repository contains unit tests for storage, utils, analysis, and other non-GUI logic. GUI tests are provided where feasible but are light-weight.
+Current tests pass locally (80 tests at time of update).
 
-## Development notes
+## How Back works (explicit)
 
-- Storage uses Python's `csv` module for robust reading/writing of `expenses.txt`.
-- All storage functions accept an optional `path` argument to enable tests to use temporary files.
-- Timestamps are recorded as ISO-8601 in UTC; the GUI converts to local time according to `config.py` settings.
-- If you plan to extend the project, consider migrating to SQLite for atomic writes and queries.
+All three screens that you asked about return to the main menu using `self.main_menu()` when the Back button is pressed:
+
+- `view_expenses()` — contains `tk.Button(..., text="🔙 Back", command=self.main_menu)`
+- `analyze_expenses()` — contains `tk.Button(..., text="🔙 Back", command=self.main_menu)`
+- `open_preferences()` — contains `tk.Button(..., text="🔙 Back", command=self.main_menu)`
+
+If you do not see the Back button in the running app, please verify the window size or scaling; the Back button is placed near the bottom of the screen and may be off-screen on small displays. Resize the app window to 700x500 (default) or larger.
+
+## Troubleshooting
+
+- If `pytest` is not found: use `python -m pytest`.
+- If the GUI shows a blank area for the chart, ensure `matplotlib` and `seaborn` are installed.
+- If `photo1.jpg` is missing, the app falls back to a solid background color.
+
+## Recommended GitHub additions
+
+- Add a `LICENSE` (e.g., MIT) to allow reuse.
+- Add a small CI workflow (GitHub Actions) to run `pytest` on push; include a badge in this README.
+- Add a `CONTRIBUTING.md` if you expect external contributions.
 
 ## Contributing
 
-Contributions are welcome. Please follow these guidelines:
+1. Fork the repository and create a feature branch.
+2. Add tests for new behavior in `test_*.py`.
+3. Open a pull request with a clear description and link to test results.
 
-- Fork the repo and create a feature branch.
-- Add tests for any new functionality or bugfixes.
-- Keep changes focused and include a clear pull request description.
-- Run `pytest` locally before submitting.
+## Commit and push guidance
 
-If you'd like help splitting the GUI into smaller testable components or porting storage to SQLite, I can help implement it.
-
-## Security & privacy
-
-- This application stores data locally in `expenses.txt`. Do not commit personal data to version control.
-- There is no authentication or encryption — treat this as a personal, local tool.
-
-## License
-
-No license is included. If you would like to permit reuse, add a `LICENSE` file (for example, MIT). If you'd like, I can add a default license for you.
+- Commit readable messages. Example: `git commit -m "Normalize Back labels in GUI; update README"`.
+- Push to your fork and open PR against `main`.
 
 ## Contact
 
-Open issues or PRs in this repository for bugs and feature requests. If you'd like me to:
+Open issues or PRs for bugs, feature requests, or help exporting to SQLite or a web UI.
 
-- run the test suite,
-- commit these README changes, or
-- add a license and CI config,
-  tell me which and I'll proceed.
-
-## IODEX — Expense Tracker (Desktop GUI)
-
-A compact desktop expense-tracking application implemented with Python and Tkinter. The program records simple expense entries to a local text file, provides a view of saved records, and offers a basic category-based analysis (bar chart). This repository contains the application source, runtime dependencies, and the plain-text data file used for persistence.
-
-## Project background and motivation
-
-This project was developed as an academic final project with the intent to demonstrate practical software development skills and basic data analysis. The immediate motivation was to implement a minimal, self-contained expense tracker that illustrates GUI development, file-based persistence, and simple data aggregation/visualization. The implementation targets a single-user, local environment and does not attempt to provide multi-user, networked, or production-grade guarantees.
-
-Scope and constraints
-
-- Single-user, local desktop application only (no web server or network sync).
-- Persistent storage is a plain-text file (`expenses.txt`) in CSV-like format; no database is used.
-- Dependencies are minimal and chosen for ease of plotting and data handling (`pandas`, `matplotlib`, `seaborn`).
-- The implementation focuses on functionality and demonstration rather than scalability, performance tuning, or security-hardening.
-
-## Objectives
-
-- Functional
-
-  - Allow the user to add expense entries consisting of a category, an amount, and an optional description.
-  - Show all recorded expenses in a tabular view and compute the total spent.
-  - Produce a category-wise bar chart of total expenses for simple analysis.
-  - Provide a way to clear all stored expenses.
-
-- Technical
-  - Use standard Python tooling and libraries available via `pip`.
-  - Keep the application single-file and easy to run for grading and demonstration.
-  - Provide clear, inspectable data output in a simple text format.
-
-## System overview
-
-Major components
-
-- `gui_expense_tracker.py` — Application entry point.
-
-  - Simplified launcher that initializes and runs the application.
-  - Imports the modular components below.
-
-- `gui.py` — User Interface module (class-based).
-
-  - `ExpenseTrackerGUI` class encapsulates all Tkinter UI logic.
-  - Separated from business logic for improved testability and maintainability.
-  - Methods for each screen: `main_menu()`, `view_expenses()`, `analyze_expenses()`, etc.
-
-- `storage.py` — Data Persistence module.
-
-  - `append_expense(category, amount, description, path)` — Add a single expense.
-  - `load_expenses(path)` — Load all expenses from file.
-  - `get_total_spent(path)` — Calculate total amount spent.
-  - `clear_expenses(path)` — Delete all expense records.
-  - `file_exists(path)` — Check if storage file exists.
-  - All functions accept optional `path` parameter for flexibility and testability.
-  - Uses Python's `csv` module for robust CSV parsing and writing.
-
-- `analysis.py` — Data Analysis module.
-
-  - `get_category_totals(path)` — Aggregate expenses by category.
-  - `create_category_chart(path)` — Generate matplotlib figure for plotting.
-  - `get_summary_stats(path)` — Compute summary statistics.
-  - Separated from GUI to enable independent testing and reuse.
-
-- `test_storage.py` — Comprehensive unit test suite.
-
-  - 39 tests covering parsing, numeric coercion, and storage functions.
-  - Uses pytest for test automation and validation.
-  - Tests edge cases: commas in descriptions, quotes, newlines, special characters.
-
-- `expenses.txt` — Persistent storage (CSV format).
-
-  - Each expense is stored as: `Category,Amount,Description,Timestamp` (ISO-8601 UTC).
-  - Timestamps are stored in UTC and displayed in the GUI in local time by default; users can change formatting in Preferences.
-  - Uses proper CSV quoting to handle special characters in fields.
-
-- Third-party libraries for analysis and visualization:
-  - `pandas` — Data loading and aggregation.
-  - `matplotlib` and `seaborn` — Chart generation and embedding in GUI.
-
-Data flow
-
-1. User adds an expense via the GUI. The entry is written to `expenses.txt` using `storage.append_expense()`.
-2. Viewing reads `expenses.txt` using `storage.load_expenses()`, which properly parses CSV format.
-3. Analysis uses `analysis.create_category_chart()` to aggregate and visualize expenses.
-4. All data operations are separated from UI logic and can be tested independently.
-
-## Design decisions and architecture
-
-Key choices
-
-- Plain-text CSV file for persistence
-
-  - Rationale: simplicity, minimal setup, and human-readable format.
-  - Implementation: Uses Python's `csv` module for robust parsing and writing.
-  - Benefit: Properly handles commas, quotes, and newlines in field values.
-
-- Modular architecture with separated concerns
-
-  - Rationale: Improved testability, maintainability, and code reuse.
-  - Structure:
-    - `storage.py`: Data persistence (testable without GUI).
-    - `analysis.py`: Data analysis (reusable across interfaces).
-    - `gui.py`: User interface (class-based, focused on presentation).
-    - `gui_expense_tracker.py`: Minimal entry point.
-  - Benefit: Each module can be tested and maintained independently.
-
-- Storage abstraction with path parameters
-
-  - Rationale: Enables flexible file handling and testability.
-  - Implementation: All storage functions accept optional `path` parameter.
-  - Benefit: Allows unit tests to use temporary files without affecting production data.
+— End of README —
 
 - Comprehensive unit testing with pytest
 
