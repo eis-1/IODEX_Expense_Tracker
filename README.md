@@ -1,3 +1,143 @@
+IODEX — Desktop Expense Tracker
+
+A compact, single-user desktop expense tracker written in Python with a Tkinter GUI. The app records expense entries to a local CSV-style text file, displays stored records, and provides simple category-based analysis (charts). This repository contains the application source, unit tests, and runtime configuration.
+
+Status: stable for local use — suitable for demos, coursework, and small personal budgets.
+
+Table of Contents
+
+- Project overview
+- Key features
+- Quick start
+- File map (what's in this repo)
+- Usage
+- Testing
+- Development notes
+- Contributing
+- License & contact
+
+## Project overview
+
+IODEX is designed as a small, easy-to-run personal expense tracker. It focuses on clarity, testability, and a clean separation between storage, analysis, and presentation layers.
+
+Goals:
+
+- Simple expense recording (category, amount, description, timestamp).
+- Human-readable, robust storage (`expenses.txt` using CSV quoting).
+- Basic analysis (category totals, bar chart).
+- Well-tested non-GUI logic with pytest.
+
+## Key features
+
+- Add expense entries with category, numeric amount, and description.
+- Robust CSV storage that handles commas, quotes, and newlines in descriptions.
+- View all expenses in a table with a running total.
+- Category-wise aggregation and embedded bar chart visualization.
+- Reset/clear stored expenses from the GUI.
+- Preferences persisted in `config.py` / `config.json` (timestamp format, timezone display).
+- Comprehensive unit tests for storage, utils, and analysis modules.
+
+## Quick start (Windows)
+
+1. Clone the repository and change directory:
+
+```powershell
+cd "d:/siam/Object-oriented final project"
+```
+
+2. (Recommended) Create and activate a virtual environment:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+3. Install dependencies:
+
+```powershell
+pip install -r requirements.txt
+```
+
+4. Run the GUI:
+
+```powershell
+python gui_expense_tracker.py
+```
+
+Notes:
+
+- `expenses.txt` is created automatically when the first expense is saved.
+- Optional background image: place `photo1.jpg` next to `gui_expense_tracker.py`.
+
+## File map (what's in this repo)
+
+- `gui_expense_tracker.py` — application entry point / launcher
+- `gui.py` — Tkinter GUI implementation (`ExpenseTrackerGUI` and dialogs)
+- `storage.py` — persistence layer (append, load, clear, totals). Use `path` parameter to point at alternate files for testing.
+- `analysis.py` — aggregation and chart creation helpers
+- `database.py` — (if present) optional DB helpers or migration utilities
+- `import_export.py` — CSV/JSON import-export helpers
+- `config.py` — reads/writes `config.json` for UI preferences
+- `utils.py` — helper utilities (time formatting, validation)
+- `backup.py` — optional backup utilities
+- `expenses.txt` — runtime CSV-style data file (not checked into VCS with personal data)
+- `requirements.txt` — Python dependencies
+- `test_*.py` — pytest test suite for storage/analysis/utils/gui behaviors
+
+## Usage (summary)
+
+- Add an expense: open the app, choose `Add Expense`, fill category & amount, optional description, click OK.
+- View expenses: `View All Expenses` — table view with totals.
+- Analyze: `Analyze Expenses` — category bar chart (matplotlib/seaborn). If `plotly`+`pywebview` are installed, interactive charts may open in a native window or browser.
+- Reset: `Reset Expenses` clears `expenses.txt` after confirmation.
+
+## Tests
+
+Run the test suite with pytest (recommended inside a virtualenv):
+
+```powershell
+pip install -r requirements.txt
+pytest -q
+```
+
+The repository contains unit tests for storage, utils, analysis, and other non-GUI logic. GUI tests are provided where feasible but are light-weight.
+
+## Development notes
+
+- Storage uses Python's `csv` module for robust reading/writing of `expenses.txt`.
+- All storage functions accept an optional `path` argument to enable tests to use temporary files.
+- Timestamps are recorded as ISO-8601 in UTC; the GUI converts to local time according to `config.py` settings.
+- If you plan to extend the project, consider migrating to SQLite for atomic writes and queries.
+
+## Contributing
+
+Contributions are welcome. Please follow these guidelines:
+
+- Fork the repo and create a feature branch.
+- Add tests for any new functionality or bugfixes.
+- Keep changes focused and include a clear pull request description.
+- Run `pytest` locally before submitting.
+
+If you'd like help splitting the GUI into smaller testable components or porting storage to SQLite, I can help implement it.
+
+## Security & privacy
+
+- This application stores data locally in `expenses.txt`. Do not commit personal data to version control.
+- There is no authentication or encryption — treat this as a personal, local tool.
+
+## License
+
+No license is included. If you would like to permit reuse, add a `LICENSE` file (for example, MIT). If you'd like, I can add a default license for you.
+
+## Contact
+
+Open issues or PRs in this repository for bugs and feature requests. If you'd like me to:
+
+- run the test suite,
+- commit these README changes, or
+- add a license and CI config,
+  tell me which and I'll proceed.
+
 ## IODEX — Expense Tracker (Desktop GUI)
 
 A compact desktop expense-tracking application implemented with Python and Tkinter. The program records simple expense entries to a local text file, provides a view of saved records, and offers a basic category-based analysis (bar chart). This repository contains the application source, runtime dependencies, and the plain-text data file used for persistence.

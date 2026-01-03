@@ -249,9 +249,8 @@ class ExpenseTrackerGUI:
 
             tk.Button(self.root, text="⬇ Export Image", bg="#AED6F1", command=lambda: self._export_chart(fig)).pack(pady=2)
             tk.Button(self.root, text="🌐 Open Interactive Chart", bg="#AED6F1", command=lambda: analysis.open_interactive_chart(self.filepath)).pack(pady=2)
-            # Add another Back button near the top for visibility
+            # Back button to return to main menu
             tk.Button(self.root, text="🔙 Back", bg="#D5DBDB", command=self.main_menu).pack(pady=10)
-            tk.Button(self.root, text="🔙 Back (bottom)", bg="#D5DBDB", command=self.main_menu).pack(pady=10)
         
         except ValueError as e:
             messagebox.showerror("Error", str(e))
@@ -410,7 +409,7 @@ class ExpenseTrackerGUI:
             self.main_menu()
         tk.Button(self.root, text="Save", bg="#58D68D", fg="white", command=save_prefs).pack(pady=5)
         tk.Frame(self.root, bg="#AED6F1").pack(pady=2)  # spacer
-        tk.Button(self.root, text="Back", bg="#D5DBDB", command=self.main_menu).pack(side='left', padx=20)
+        tk.Button(self.root, text="🔙 Back", bg="#D5DBDB", command=self.main_menu).pack(side='left', padx=20)
         tk.Button(self.root, text="Cancel", bg="#EC7063", fg="white", command=self.main_menu).pack()
 
         tk.Label(self.root, text="© 2025 IODEX. All rights reserved.", 
