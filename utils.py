@@ -1,8 +1,59 @@
 """
 Utility helpers for timestamp parsing and formatting.
 """
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
+from zoneinfo import available_timezones, ZoneInfo
+
+
+def build_timezone_registry():
+    """Build an optimized timezone registry with GMT offsets and display names.
+    
+    Returns a tuple (tz_list, tz_display_map) where:
+    - tz_list: sorted list of all timezone codes
+    - tz_display_map: dict mapping tz_code -> (display_name, gmt_offset_str)
+    """
+    try:
+        all_tzs = sorted([tz for tz in available_timezones() if '/' in tz])
+    except Exception:
+        all_tzs = []
+    
+    tz_display_map = {}
+    # Use a reference datetime to compute offsets (Jan 3, 2026 12:00 UTC)
+    ref_dt = datetime(2026, 1, 3, 12, 0, 0, tzinfo=timezone.utc)
+    
+    for tz_code in all_tzs:
+        try:
+            zi = ZoneInfo(tz_code)
+            local_dt = ref_dt.astimezone(zi)
+            offset = local_dt.utcoffset()
+            if offset is None:
+                gmt_str = "GMT"
+            else:
+                total_secs = int(offset.total_seconds())
+                hours = total_secs // 3600
+                mins = (abs(total_secs) % 3600) // 60
+                sign = '+' if hours >= 0 else '-'
+                if mins:
+                    gmt_str = f"GMT{sign}{abs(hours)}:{mins:02d}"
+                else:
+                    gmt_str = f"GMT{sign}{abs(hours)}" if hours != 0 else "GMT"
+            # Pretty display: Region / City — GMT offset
+            parts = tz_code.split('/')
+            city = parts[-1].replace('_', ' ').title()
+            region = parts[-2].replace('_', ' ').title() if len(parts) > 1 else ''
+            display_name = f"{region}/{city}" if region else city
+            tz_display_map[tz_code] = (display_name, gmt_str)
+        except Exception:
+            # Skip invalid timezones
+            pass
+    
+    # Also add system and UTC
+    tz_list = ['system', 'UTC'] + all_tzs
+    tz_display_map['system'] = ('System Default', 'local')
+    tz_display_map['UTC'] = ('UTC', 'GMT+0')
+    
+    return tz_list, tz_display_map
 
 
 def parse_iso_to_local_dt(iso_str: str) -> Optional[datetime]:

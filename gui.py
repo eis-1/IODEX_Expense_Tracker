@@ -105,9 +105,12 @@ class ExpenseTrackerGUI:
         for cat in self.categories:
             tk.Button(self.root, text=cat, width=20, bg="#85C1E9", 
                      command=lambda c=cat: self.category_input(c)).pack(pady=2)
-        
+
+        # Back button to return to main menu (ensure visible on small displays)
+        tk.Button(self.root, text="🔙 Back", bg="#D5DBDB", command=self.main_menu).pack(pady=8)
+
         tk.Label(self.root, text="© 2025 IODEX. All rights reserved.", 
-                bg="#AED6F1", font=("Arial", 9, "italic")).pack(side="bottom", pady=5)
+            bg="#AED6F1", font=("Arial", 9, "italic")).pack(side="bottom", pady=5)
     
     def category_input(self, category):
         """
@@ -134,6 +137,8 @@ class ExpenseTrackerGUI:
                      category, amount_entry.get(), description_entry.get())).pack(pady=5)
         tk.Button(self.root, text="❌ Cancel", bg="#EC7063", fg="white", 
                  command=self.main_menu).pack()
+        # Explicit Back button for clarity and accessibility
+        tk.Button(self.root, text="🔙 Back", bg="#D5DBDB", command=self.main_menu).pack(pady=6)
         
         tk.Label(self.root, text="© 2025 IODEX. All rights reserved.", 
                 bg="#AED6F1", font=("Arial", 9, "italic")).pack(side="bottom", pady=5)
@@ -282,42 +287,121 @@ class ExpenseTrackerGUI:
         # Timezone selector for world time locations
         tk.Label(self.root, text="Timezone (for explicit selection):", bg="#AED6F1").pack(anchor='w', padx=10, pady=(8,0))
         import utils
-        # Timezone selector (quick list + searchable filter + show all)
-        tz_list = utils.sample_timezones(limit=10, include_system=True)
+        # Timezone selector with optimized autocomplete search
+        tk.Label(self.root, text="Timezone (for explicit selection):", bg="#AED6F1").pack(anchor='w', padx=10, pady=(8,0))
+        import utils
+        
+        # Build timezone registry with GMT offsets (cached)
+        if not hasattr(self, '_tz_registry'):
+            self._tz_registry = utils.build_timezone_registry()
+        tz_list_all, tz_display_map = self._tz_registry
         tz_var = tk.StringVar(value=self.config.get('timezone', 'system'))
-
+        
+        # Instruction label
+        tk.Label(self.root, text="💡 Type city or country name (e.g., 'london', 'tokyo', 'dhaka'):", 
+                fg="#666", bg="#AED6F1", font=("Arial", 9)).pack(anchor='w', padx=20, pady=(4, 2))
+        
         search_var = tk.StringVar(value='')
-        tk.Label(self.root, text="Search timezones:", bg="#AED6F1").pack(anchor='w', padx=20)
-        search_entry = tk.Entry(self.root, textvariable=search_var, width=40)
-        search_entry.pack(anchor='w', padx=20)
-
-        tz_combo = ttk.Combobox(self.root, values=tz_list, textvariable=tz_var, width=40)
-        tz_combo.pack(anchor='w', padx=20)
-
-        show_all_var = tk.BooleanVar(value=False)
-        def toggle_show_all():
-            if show_all_var.get():
-                # load full list (may be large)
-                try:
-                    from zoneinfo import available_timezones
-                    full = sorted([tz for tz in list(available_timezones()) if "/" in tz])
-                    tz_combo['values'] = ["system", "UTC"] + full
-                except Exception:
-                    tz_combo['values'] = ["system", "UTC", "America/New_York", "Europe/London", "Asia/Tokyo", "Australia/Sydney"]
-            else:
-                tz_combo['values'] = utils.sample_timezones(limit=10, include_system=True)
-        tk.Checkbutton(self.root, text="Show all timezones", variable=show_all_var, command=toggle_show_all, bg="#AED6F1").pack(anchor='w', padx=20)
-
-        def filter_timezones(*args):
-            q = search_var.get().strip()
-            if not q:
-                tz_combo['values'] = utils.sample_timezones(limit=10, include_system=True)
+        
+        # Build a prefix-search index for fast autocomplete (tz_code -> searchable strings)
+        search_index = {}
+        for tz_code, (display_name, gmt_offset) in tz_display_map.items():
+            # Index by lowercase parts: region, city, and full display
+            search_keys = [display_name.lower(), gmt_offset.lower(), tz_code.lower()]
+            for part in display_name.split('/'):
+                search_keys.append(part.lower().strip())
+            search_index[tz_code] = search_keys
+        
+        def get_suggestions(query: str) -> list:
+            """Get timezone codes matching the query (prefix or substring match)."""
+            if not query:
+                return ['system', 'UTC'] + tz_list_all[2:10]  # Return sample list
+            
+            qlow = query.lower().strip()
+            matches = []
+            
+            # Prefix match first (fastest)
+            for tz_code, keys in search_index.items():
+                for key in keys:
+                    if key.startswith(qlow):
+                        matches.append(tz_code)
+                        break
+            
+            # If few matches, try substring match
+            if len(matches) < 5:
+                for tz_code, keys in search_index.items():
+                    if tz_code not in matches:
+                        for key in keys:
+                            if qlow in key:
+                                matches.append(tz_code)
+                                break
+            
+            return matches[:100]  # Limit suggestions to top 100
+        
+        # Autocomplete dropdown using Combobox
+        suggestions_var = tk.StringVar()
+        suggestions_combo = ttk.Combobox(self.root, textvariable=suggestions_var, width=50, state='readonly')
+        suggestions_combo.pack(anchor='w', padx=20, pady=2)
+        
+        # Timezone list (Listbox + scrollbar) showing results
+        list_frame = tk.Frame(self.root, bg="#AED6F1")
+        list_frame.pack(anchor='w', padx=20, pady=(4, 0))
+        scrollbar = tk.Scrollbar(list_frame, orient='vertical')
+        tz_listbox = tk.Listbox(list_frame, height=6, width=60, yscrollcommand=scrollbar.set)
+        scrollbar.config(command=tz_listbox.yview)
+        tz_listbox.pack(side='left', fill='both', expand=True)
+        scrollbar.pack(side='left', fill='y')
+        
+        # Map listbox indices to timezone codes
+        self._tz_listbox_map = []
+        
+        def populate_listbox(tz_codes: list):
+            """Populate the listbox with formatted timezone entries."""
+            tz_listbox.delete(0, 'end')
+            self._tz_listbox_map = []
+            for tz_code in tz_codes:
+                if tz_code in tz_display_map:
+                    display_name, gmt_offset = tz_display_map[tz_code]
+                    display_text = f"{display_name} — {gmt_offset}"
+                    tz_listbox.insert('end', display_text)
+                    self._tz_listbox_map.append(tz_code)
+        
+        # Update suggestions as user types
+        def update_suggestions(*args):
+            query = search_var.get()
+            sugg = get_suggestions(query)
+            sugg_displays = [f"{tz_display_map[tz][0]} — {tz_display_map[tz][1]}" for tz in sugg]
+            suggestions_combo['values'] = sugg_displays
+            if sugg_displays:
+                suggestions_combo.current(0)
+                populate_listbox(sugg)
+        
+        search_var.trace_add('write', update_suggestions)
+        
+        # When user selects from suggestions, populate listbox with all matching results
+        def on_suggestion_select(event=None):
+            query = search_var.get()
+            if query:
+                matches = get_suggestions(query)
+                populate_listbox(matches)
+        
+        suggestions_combo.bind('<<ComboboxSelected>>', on_suggestion_select)
+        
+        # When user clicks on a listbox item, select that timezone
+        def select_from_listbox(event=None):
+            sel = tz_listbox.curselection()
+            if not sel:
                 return
-            # Use fuzzy_timezones utility for better UX
-            matches = utils.fuzzy_timezones(q, limit=200)
-            tz_combo['values'] = matches
-
-        search_var.trace_add('write', filter_timezones)
+            idx = sel[0]
+            if idx < len(self._tz_listbox_map):
+                tz_code = self._tz_listbox_map[idx]
+                tz_var.set(tz_code)
+                update_preview()
+        
+        tz_listbox.bind('<<ListboxSelect>>', select_from_listbox)
+        
+        # Initialize listbox with sample timezones
+        populate_listbox(['system', 'UTC'] + tz_list_all[2:10])
         # Custom format entry with hint
         tk.Label(self.root, text="Custom strftime format (advanced):", bg="#AED6F1").pack(anchor='w', padx=10)
         custom_entry = tk.Entry(self.root, width=40)
@@ -377,7 +461,7 @@ class ExpenseTrackerGUI:
             mode = mode_var.get()
             custom_fmt = custom_entry.get()
             show_rel = bool(rel_var.get())
-            tz = self.config.get('timezone', 'system')
+            tz = tz_var.get()
             from utils import format_iso_timestamp
             preview_text = format_iso_timestamp(sample_iso, mode=mode, custom_fmt=custom_fmt, show_relative=show_rel, tz_name=tz)
             preview_label.config(text=preview_text)
@@ -388,25 +472,23 @@ class ExpenseTrackerGUI:
         # Bind updates
         mode_var.trace_add('write', update_preview)
         rel_var.trace_add('write', update_preview)
+        tz_var.trace_add('write', update_preview)
         custom_entry.bind('<KeyRelease>', lambda e: update_preview())
 
         # Initialize preview
         update_preview()
 
-    @staticmethod
-    def compute_preview_text(sample_iso: str, mode: str, custom_fmt: str, show_rel: bool, tz_name: str = 'system') -> str:
-        """Return the preview text without creating GUI elements (used by tests)."""
-        from utils import format_iso_timestamp
-        return format_iso_timestamp(sample_iso, mode=mode, custom_fmt=custom_fmt, show_relative=show_rel, tz_name=tz_name)
-
+        # Save and Back controls (placed after preview to ensure they are visible)
         def save_prefs():
             self.config['timestamp_mode'] = mode_var.get()
             self.config['custom_format'] = custom_entry.get()
             self.config['show_relative'] = bool(rel_var.get())
+            self.config['timezone'] = tz_var.get()
             import config as _c
             _c.save_config(self.config)
             messagebox.showinfo("Preferences", "Preferences saved.")
             self.main_menu()
+
         tk.Button(self.root, text="Save", bg="#58D68D", fg="white", command=save_prefs).pack(pady=5)
         tk.Frame(self.root, bg="#AED6F1").pack(pady=2)  # spacer
         tk.Button(self.root, text="🔙 Back", bg="#D5DBDB", command=self.main_menu).pack(side='left', padx=20)
@@ -414,6 +496,12 @@ class ExpenseTrackerGUI:
 
         tk.Label(self.root, text="© 2025 IODEX. All rights reserved.", 
                 bg="#AED6F1", font=("Arial", 9, "italic")).pack(side="bottom", pady=5)
+
+    @staticmethod
+    def compute_preview_text(sample_iso: str, mode: str, custom_fmt: str, show_rel: bool, tz_name: str = 'system') -> str:
+        """Return the preview text without creating GUI elements (used by tests)."""
+        from utils import format_iso_timestamp
+        return format_iso_timestamp(sample_iso, mode=mode, custom_fmt=custom_fmt, show_relative=show_rel, tz_name=tz_name)
     
     def reset_expenses(self):
         """Clear all expense records after user confirmation."""
