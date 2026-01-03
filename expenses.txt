@@ -18,3 +18,4 @@ Shopping,150,Clothes
 Food,30.0,IcecreamShopping,100.0,Book
 Shopping,100.0,Book
 Rent,45.0,Car Wash,2026-01-03T05:07:12.664435+00:00
+Rent,34.0,Parking slot,2026-01-03T11:55:21.634919+00:00
