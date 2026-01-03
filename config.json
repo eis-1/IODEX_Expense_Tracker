@@ -1,0 +1,6 @@
+{
+  "timestamp_mode": "local",
+  "custom_format": "%Y-%m-%d %H:%M:%S %Z",
+  "show_relative": true,
+  "timezone": "system"
+}

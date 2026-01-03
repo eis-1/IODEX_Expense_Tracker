@@ -274,120 +274,114 @@ class ExpenseTrackerGUI:
         """Open a preferences dialog to let users choose timestamp display options."""
         self._clear_window()
 
-        tk.Label(self.root, text="Preferences", font=("Comic Sans MS", 16, "bold"), bg="#AED6F1").pack(pady=10)
+        # Create a scrollable frame for the content
+        canvas = tk.Canvas(self.root, bg="#AED6F1", highlightthickness=0)
+        scrollbar = tk.Scrollbar(self.root, orient='vertical', command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg="#AED6F1")
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
 
-        # Timestamp mode selection with explanatory text
-        tk.Label(self.root, text="Timestamp display mode:", font=("Arial", 11, "bold"), bg="#AED6F1").pack(anchor='w', padx=10)
-        tk.Label(self.root, text="Choose how timestamps are displayed in the app.", fg="#555", bg="#AED6F1").pack(anchor='w', padx=10)
+        # Title
+        tk.Label(scrollable_frame, text="⚙️ Preferences", font=("Comic Sans MS", 16, "bold"), 
+                bg="#AED6F1").pack(pady=15, padx=10)
+
+        # === SECTION 1: Timestamp Mode ===
+        tk.Label(scrollable_frame, text="1. Timestamp Display Mode", font=("Arial", 12, "bold"), 
+                fg="#1a5490", bg="#AED6F1").pack(anchor='w', padx=15, pady=(10, 5))
+        tk.Label(scrollable_frame, text="Choose how timestamps appear in the app.", 
+                fg="#555", bg="#AED6F1", font=("Arial", 9)).pack(anchor='w', padx=20, pady=(0, 5))
+        
         mode_var = tk.StringVar(value=self.config.get('timestamp_mode', 'local'))
-        tk.Radiobutton(self.root, text="Local time", variable=mode_var, value='local', bg="#AED6F1").pack(anchor='w', padx=20)
-        tk.Radiobutton(self.root, text="UTC (Coordinated Universal Time)", variable=mode_var, value='utc', bg="#AED6F1").pack(anchor='w', padx=20)
-        tk.Radiobutton(self.root, text="Custom format", variable=mode_var, value='custom', bg="#AED6F1").pack(anchor='w', padx=20)
+        tk.Radiobutton(scrollable_frame, text="📍 Local time (your timezone)", variable=mode_var, 
+                      value='local', bg="#AED6F1").pack(anchor='w', padx=30)
+        tk.Radiobutton(scrollable_frame, text="🌍 UTC (Coordinated Universal Time)", variable=mode_var, 
+                      value='utc', bg="#AED6F1").pack(anchor='w', padx=30)
+        tk.Radiobutton(scrollable_frame, text="✏️ Custom format (advanced)", variable=mode_var, 
+                      value='custom', bg="#AED6F1").pack(anchor='w', padx=30)
+
+        # === SECTION 2: Timezone Selection ===
+        tk.Label(scrollable_frame, text="2. Timezone Selection", font=("Arial", 12, "bold"), 
+                fg="#1a5490", bg="#AED6F1").pack(anchor='w', padx=15, pady=(15, 5))
+        tk.Label(scrollable_frame, text="💡 Search by city name (e.g., 'london', 'tokyo', 'dhaka'):", 
+                fg="#666", bg="#AED6F1", font=("Arial", 9)).pack(anchor='w', padx=20, pady=(0, 5))
         
-        # Timezone selector for world time locations
-        tk.Label(self.root, text="Timezone (for explicit selection):", bg="#AED6F1").pack(anchor='w', padx=10, pady=(8,0))
         import utils
-        # Timezone selector with optimized autocomplete search
-        tk.Label(self.root, text="Timezone (for explicit selection):", bg="#AED6F1").pack(anchor='w', padx=10, pady=(8,0))
-        import utils
-        
-        # Build timezone registry with GMT offsets (cached)
         if not hasattr(self, '_tz_registry'):
             self._tz_registry = utils.build_timezone_registry()
         tz_list_all, tz_display_map = self._tz_registry
         tz_var = tk.StringVar(value=self.config.get('timezone', 'system'))
         
-        # Instruction label
-        tk.Label(self.root, text="💡 Type city or country name (e.g., 'london', 'tokyo', 'dhaka'):", 
-                fg="#666", bg="#AED6F1", font=("Arial", 9)).pack(anchor='w', padx=20, pady=(4, 2))
-        
+        # Search input
         search_var = tk.StringVar(value='')
+        search_entry = tk.Entry(scrollable_frame, textvariable=search_var, width=50, font=("Arial", 10))
+        search_entry.pack(anchor='w', padx=20, pady=(0, 5))
         
-        # Build a prefix-search index for fast autocomplete (tz_code -> searchable strings)
+        # Build search index
         search_index = {}
         for tz_code, (display_name, gmt_offset) in tz_display_map.items():
-            # Index by lowercase parts: region, city, and full display
             search_keys = [display_name.lower(), gmt_offset.lower(), tz_code.lower()]
             for part in display_name.split('/'):
                 search_keys.append(part.lower().strip())
             search_index[tz_code] = search_keys
         
         def get_suggestions(query: str) -> list:
-            """Get timezone codes matching the query (prefix or substring match)."""
+            """Get timezone codes matching the query."""
             if not query:
-                return ['system', 'UTC'] + tz_list_all[2:10]  # Return sample list
+                return ['system', 'UTC'] + tz_list_all[2:15]
             
             qlow = query.lower().strip()
             matches = []
-            
-            # Prefix match first (fastest)
             for tz_code, keys in search_index.items():
                 for key in keys:
-                    if key.startswith(qlow):
+                    if key.startswith(qlow) or qlow in key:
                         matches.append(tz_code)
                         break
-            
-            # If few matches, try substring match
-            if len(matches) < 5:
-                for tz_code, keys in search_index.items():
-                    if tz_code not in matches:
-                        for key in keys:
-                            if qlow in key:
-                                matches.append(tz_code)
-                                break
-            
-            return matches[:100]  # Limit suggestions to top 100
+            return matches[:50]
         
-        # Autocomplete dropdown using Combobox
-        suggestions_var = tk.StringVar()
-        suggestions_combo = ttk.Combobox(self.root, textvariable=suggestions_var, width=50, state='readonly')
-        suggestions_combo.pack(anchor='w', padx=20, pady=2)
+        # Timezone listbox (now shows City, Country — GMT+X format)
+        list_frame = tk.Frame(scrollable_frame, bg="#AED6F1")
+        list_frame.pack(anchor='w', padx=20, pady=(0, 5), fill='both', expand=True)
         
-        # Timezone list (Listbox + scrollbar) showing results
-        list_frame = tk.Frame(self.root, bg="#AED6F1")
-        list_frame.pack(anchor='w', padx=20, pady=(4, 0))
-        scrollbar = tk.Scrollbar(list_frame, orient='vertical')
-        tz_listbox = tk.Listbox(list_frame, height=6, width=60, yscrollcommand=scrollbar.set)
-        scrollbar.config(command=tz_listbox.yview)
+        list_scrollbar = tk.Scrollbar(list_frame, orient='vertical')
+        tz_listbox = tk.Listbox(list_frame, height=6, width=70, yscrollcommand=list_scrollbar.set, 
+                               font=("Arial", 9), bg="#FFFFFF")
+        list_scrollbar.config(command=tz_listbox.yview)
         tz_listbox.pack(side='left', fill='both', expand=True)
-        scrollbar.pack(side='left', fill='y')
+        list_scrollbar.pack(side='right', fill='y')
         
-        # Map listbox indices to timezone codes
         self._tz_listbox_map = []
         
         def populate_listbox(tz_codes: list):
-            """Populate the listbox with formatted timezone entries."""
+            """Populate listbox with City, Country — GMT format."""
             tz_listbox.delete(0, 'end')
             self._tz_listbox_map = []
             for tz_code in tz_codes:
                 if tz_code in tz_display_map:
                     display_name, gmt_offset = tz_display_map[tz_code]
-                    display_text = f"{display_name} — {gmt_offset}"
+                    # Extract just the city part (last component)
+                    city = display_name.split('/')[-1]
+                    country = display_name.split('/')[0] if '/' in display_name else 'System'
+                    # Format: City, Country — GMT offset
+                    display_text = f"{city}, {country} — {gmt_offset}"
                     tz_listbox.insert('end', display_text)
                     self._tz_listbox_map.append(tz_code)
         
-        # Update suggestions as user types
         def update_suggestions(*args):
             query = search_var.get()
             sugg = get_suggestions(query)
-            sugg_displays = [f"{tz_display_map[tz][0]} — {tz_display_map[tz][1]}" for tz in sugg]
-            suggestions_combo['values'] = sugg_displays
-            if sugg_displays:
-                suggestions_combo.current(0)
-                populate_listbox(sugg)
+            populate_listbox(sugg)
         
         search_var.trace_add('write', update_suggestions)
         
-        # When user selects from suggestions, populate listbox with all matching results
-        def on_suggestion_select(event=None):
-            query = search_var.get()
-            if query:
-                matches = get_suggestions(query)
-                populate_listbox(matches)
-        
-        suggestions_combo.bind('<<ComboboxSelected>>', on_suggestion_select)
-        
-        # When user clicks on a listbox item, select that timezone
         def select_from_listbox(event=None):
             sel = tz_listbox.curselection()
             if not sel:
@@ -399,86 +393,64 @@ class ExpenseTrackerGUI:
                 update_preview()
         
         tz_listbox.bind('<<ListboxSelect>>', select_from_listbox)
+        populate_listbox(['system', 'UTC'] + tz_list_all[2:15])
+
+        # === SECTION 3: Custom Format ===
+        tk.Label(scrollable_frame, text="3. Custom Time Format (Advanced)", font=("Arial", 12, "bold"), 
+                fg="#1a5490", bg="#AED6F1").pack(anchor='w', padx=15, pady=(15, 5))
+        tk.Label(scrollable_frame, text="Available tokens: %Y (year) %m (month) %d (day) %H (hour) %M (min) %Z (zone)", 
+                fg="#555", bg="#AED6F1", font=("Arial", 8)).pack(anchor='w', padx=20, pady=(0, 3))
         
-        # Initialize listbox with sample timezones
-        populate_listbox(['system', 'UTC'] + tz_list_all[2:10])
-        # Custom format entry with hint
-        tk.Label(self.root, text="Custom strftime format (advanced):", bg="#AED6F1").pack(anchor='w', padx=10)
-        custom_entry = tk.Entry(self.root, width=40)
+        custom_entry = tk.Entry(scrollable_frame, width=50, font=("Arial", 10))
         custom_entry.insert(0, self.config.get('custom_format', '%Y-%m-%d %H:%M:%S %Z'))
-        custom_entry.pack(anchor='w', padx=20)
-        custom_hint = tk.Label(self.root, text="Enable this by selecting 'Custom format' above. Example tokens: %Y %m %d %H %M %Z", fg="#555", bg="#AED6F1")
-        custom_hint.pack(anchor='w', padx=20)
+        custom_entry.pack(anchor='w', padx=20, pady=(0, 5))
 
-        # Relative time checkbox
+        # === SECTION 4: Options ===
+        tk.Label(scrollable_frame, text="4. Display Options", font=("Arial", 12, "bold"), 
+                fg="#1a5490", bg="#AED6F1").pack(anchor='w', padx=15, pady=(15, 5))
+        
         rel_var = tk.BooleanVar(value=self.config.get('show_relative', True))
-        tk.Checkbutton(self.root, text="Show relative time (e.g., '2h ago')", variable=rel_var, bg="#AED6F1").pack(anchor='w', padx=10)
+        tk.Checkbutton(scrollable_frame, text="⏱️ Show relative time (e.g., '2h ago')", 
+                      variable=rel_var, bg="#AED6F1", font=("Arial", 10)).pack(anchor='w', padx=20)
 
-        # Enable/disable custom entry based on selection
+        # === SECTION 5: Live Preview ===
+        tk.Label(scrollable_frame, text="5. Preview", font=("Arial", 12, "bold"), 
+                fg="#1a5490", bg="#AED6F1").pack(anchor='w', padx=15, pady=(15, 5))
+        
+        preview_label = tk.Label(scrollable_frame, text="", bg="#FFFFFF", anchor='w', 
+                                relief='solid', wraplength=600, justify='left', 
+                                font=("Arial", 10), padx=10, pady=8)
+        preview_label.pack(anchor='w', padx=20, pady=(0, 10), fill='x')
+
+        # Bindings for updates
         def update_custom_visibility(*args):
-            if mode_var.get() == 'custom':
-                custom_entry.config(state='normal')
-                custom_hint.config(fg="#333")
-            else:
-                custom_entry.config(state='disabled')
-                custom_hint.config(fg="#AAA")
-
-        # Bind the update visibility
-        mode_var.trace_add('write', update_custom_visibility)
-        # Initialize state
-        update_custom_visibility()
-        # Live preview area
-        tk.Label(self.root, text="Preview:", font=("Arial", 11, "bold"), bg="#AED6F1").pack(anchor='w', pady=(10,0), padx=10)
-        preview_label = tk.Label(self.root, text="", bg="#FFFFFF", anchor='w', relief='solid', width=55)
-        preview_label.pack(anchor='w', padx=20, pady=5)
-
-        # Deterministic sample for preview to make behavior easy to understand
+            custom_entry.config(state='normal' if mode_var.get() == 'custom' else 'disabled')
+        
         sample_iso = '2026-01-03T12:00:00+00:00'
-        self.pref_mode_var = mode_var
-        self.pref_custom_entry = custom_entry
-        self.pref_rel_var = rel_var
-        self.pref_preview_label = preview_label
-        self.pref_sample_iso = sample_iso
-        self.pref_tz_var = tz_var
-
+        
         def update_preview(*args):
             mode = mode_var.get()
             custom_fmt = custom_entry.get()
             show_rel = bool(rel_var.get())
             tz = tz_var.get()
             from utils import format_iso_timestamp
-            preview_text = format_iso_timestamp(sample_iso, mode=mode, custom_fmt=custom_fmt, show_relative=show_rel, tz_name=tz)
-            preview_label.config(text=preview_text)
-
-        # Bind updates
+            preview_text = format_iso_timestamp(sample_iso, mode=mode, custom_fmt=custom_fmt, 
+                                              show_relative=show_rel, tz_name=tz)
+            preview_label.config(text=f"Sample: {preview_text}")
+        
+        mode_var.trace_add('write', update_custom_visibility)
         mode_var.trace_add('write', update_preview)
         rel_var.trace_add('write', update_preview)
         tz_var.trace_add('write', update_preview)
         custom_entry.bind('<KeyRelease>', lambda e: update_preview())
-
-
-        def update_preview(*args):
-            mode = mode_var.get()
-            custom_fmt = custom_entry.get()
-            show_rel = bool(rel_var.get())
-            tz = tz_var.get()
-            from utils import format_iso_timestamp
-            preview_text = format_iso_timestamp(sample_iso, mode=mode, custom_fmt=custom_fmt, show_relative=show_rel, tz_name=tz)
-            preview_label.config(text=preview_text)
-
-        # Expose update helper for tests and immediate updates
-        self._update_preferences_preview = update_preview
-
-        # Bind updates
-        mode_var.trace_add('write', update_preview)
-        rel_var.trace_add('write', update_preview)
-        tz_var.trace_add('write', update_preview)
-        custom_entry.bind('<KeyRelease>', lambda e: update_preview())
-
-        # Initialize preview
+        
+        update_custom_visibility()
         update_preview()
 
-        # Save and Back controls (placed after preview to ensure they are visible)
+        # === ACTION BUTTONS (Fixed at bottom) ===
+        button_frame = tk.Frame(self.root, bg="#AED6F1")
+        button_frame.pack(side='bottom', fill='x', padx=20, pady=10)
+        
         def save_prefs():
             self.config['timestamp_mode'] = mode_var.get()
             self.config['custom_format'] = custom_entry.get()
@@ -486,16 +458,25 @@ class ExpenseTrackerGUI:
             self.config['timezone'] = tz_var.get()
             import config as _c
             _c.save_config(self.config)
-            messagebox.showinfo("Preferences", "Preferences saved.")
+            messagebox.showinfo("Preferences", "✅ Preferences saved successfully!")
             self.main_menu()
 
-        tk.Button(self.root, text="Save", bg="#58D68D", fg="white", command=save_prefs).pack(pady=5)
-        tk.Frame(self.root, bg="#AED6F1").pack(pady=2)  # spacer
-        tk.Button(self.root, text="🔙 Back", bg="#D5DBDB", command=self.main_menu).pack(side='left', padx=20)
-        tk.Button(self.root, text="Cancel", bg="#EC7063", fg="white", command=self.main_menu).pack()
-
+        tk.Button(button_frame, text="💾 Save", bg="#58D68D", fg="white", 
+                 command=save_prefs, font=("Arial", 11), padx=20).pack(side='left', padx=5)
+        tk.Button(button_frame, text="🔙 Back", bg="#D5DBDB", 
+                 command=self.main_menu, font=("Arial", 11), padx=20).pack(side='left', padx=5)
+        tk.Button(button_frame, text="❌ Cancel", bg="#EC7063", fg="white", 
+                 command=self.main_menu, font=("Arial", 11), padx=20).pack(side='left', padx=5)
+        
         tk.Label(self.root, text="© 2025 IODEX. All rights reserved.", 
-                bg="#AED6F1", font=("Arial", 9, "italic")).pack(side="bottom", pady=5)
+                bg="#AED6F1", font=("Arial", 8, "italic")).pack(side="bottom", pady=3)
+        
+        # Store references for backward compatibility with tests
+        self.pref_mode_var = mode_var
+        self.pref_custom_entry = custom_entry
+        self.pref_rel_var = rel_var
+        self.pref_tz_var = tz_var
+        self._update_preferences_preview = update_preview
 
     @staticmethod
     def compute_preview_text(sample_iso: str, mode: str, custom_fmt: str, show_rel: bool, tz_name: str = 'system') -> str:
