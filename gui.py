@@ -22,8 +22,11 @@ class ExpenseTrackerGUI:
             root: Tkinter root window
             filepath: Path to expense storage file (defaults to expenses.txt)
         """
+        import config
         self.root = root
         self.filepath = filepath
+        self.config = config.load_config()
+
         self.root.title("IODEX Expense Tracker")
         self.root.geometry("700x500")
         
@@ -82,11 +85,13 @@ class ExpenseTrackerGUI:
                  command=self.analyze_expenses).pack(pady=5)
         tk.Button(self.root, text="🗑 Reset Expenses", width=30, bg="#F5B7B1", 
                  command=self.reset_expenses).pack(pady=5)
+        tk.Button(self.root, text="⚙ Preferences", width=30, bg="#FAD7A0",
+                 command=self.open_preferences).pack(pady=5)
         tk.Button(self.root, text="💾 Save Expenses", width=30, bg="#AED6F1",
                  command=lambda: messagebox.showinfo("Saved", 
                  "All expenses already saved automatically.")).pack(pady=5)
         tk.Button(self.root, text="❌ Exit", width=30, bg="#D7DBDD", 
-                 command=self.root.quit).pack(pady=5)
+                 command=self._on_exit).pack(pady=5)
         
         self._add_footer()
     
@@ -161,7 +166,7 @@ class ExpenseTrackerGUI:
         tk.Label(self.root, text="--- All Expenses ---", 
                 font=("Comic Sans MS", 16, "bold"), bg="#AED6F1").pack(pady=10)
         
-        columns = ("Category", "Amount", "Description")
+        columns = ("Category", "Amount", "Description", "Timestamp")
         tree = ttk.Treeview(self.root, columns=columns, show="headings")
         
         for col in columns:
@@ -170,9 +175,16 @@ class ExpenseTrackerGUI:
         tree.pack(expand=True, fill="both", padx=20)
         
         # Load and display expenses
+        import utils
         expenses = storage.load_expenses(self.filepath)
-        for category, amount, description in expenses:
-            tree.insert("", tk.END, values=(category, f"${amount:.2f}", description))
+        for category, amount, description, *rest in expenses:
+            timestamp = rest[0] if rest else ""
+            # Format timestamp according to user's preference
+            mode = self.config.get('timestamp_mode', 'local')
+            custom_fmt = self.config.get('custom_format', '%Y-%m-%d %H:%M:%S %Z')
+            show_rel = bool(self.config.get('show_relative', True))
+            ts_display = utils.format_iso_timestamp(timestamp, mode=mode, custom_fmt=custom_fmt, show_relative=show_rel) if timestamp else ""
+            tree.insert("", tk.END, values=(category, f"${amount:.2f}", description, ts_display))
         
         total = storage.get_total_spent(self.filepath)
         tk.Label(self.root, text=f"💰 Total Spent: ${total:.2f}", 
@@ -206,6 +218,77 @@ class ExpenseTrackerGUI:
         except ValueError as e:
             messagebox.showerror("Error", str(e))
             self.main_menu()
+
+    def open_preferences(self):
+        """Open a preferences dialog to let users choose timestamp display options."""
+        self._clear_window()
+
+        tk.Label(self.root, text="Preferences", font=("Comic Sans MS", 16, "bold"), bg="#AED6F1").pack(pady=10)
+
+        # Timestamp mode selection with explanatory text
+        tk.Label(self.root, text="Timestamp display mode:", font=("Arial", 11, "bold"), bg="#AED6F1").pack(anchor='w', padx=10)
+        tk.Label(self.root, text="Choose how timestamps are displayed in the app.", fg="#555", bg="#AED6F1").pack(anchor='w', padx=10)
+        mode_var = tk.StringVar(value=self.config.get('timestamp_mode', 'local'))
+        tk.Radiobutton(self.root, text="Local time", variable=mode_var, value='local', bg="#AED6F1").pack(anchor='w', padx=20)
+        tk.Radiobutton(self.root, text="UTC (Coordinated Universal Time)", variable=mode_var, value='utc', bg="#AED6F1").pack(anchor='w', padx=20)
+        tk.Radiobutton(self.root, text="Custom format", variable=mode_var, value='custom', bg="#AED6F1").pack(anchor='w', padx=20)
+
+        # Custom format entry with hint
+        tk.Label(self.root, text="Custom strftime format (advanced):", bg="#AED6F1").pack(anchor='w', padx=10)
+        custom_entry = tk.Entry(self.root, width=40)
+        custom_entry.insert(0, self.config.get('custom_format', '%Y-%m-%d %H:%M:%S %Z'))
+        custom_entry.pack(anchor='w', padx=20)
+        tk.Label(self.root, text="Example tokens: %Y year, %m month, %d day, %H hour, %M minute, %Z timezone", fg="#555", bg="#AED6F1").pack(anchor='w', padx=20)
+
+        # Relative time checkbox
+        rel_var = tk.BooleanVar(value=self.config.get('show_relative', True))
+        tk.Checkbutton(self.root, text="Show relative time (e.g., '2h ago')", variable=rel_var, bg="#AED6F1").pack(anchor='w', padx=10)
+
+        # Live preview area
+        tk.Label(self.root, text="Preview:", font=("Arial", 11, "bold"), bg="#AED6F1").pack(anchor='w', pady=(10,0), padx=10)
+        preview_label = tk.Label(self.root, text="", bg="#FFFFFF", anchor='w', relief='solid', width=55)
+        preview_label.pack(anchor='w', padx=20, pady=5)
+
+        # Deterministic sample for preview to make behavior easy to understand
+        sample_iso = '2026-01-03T12:00:00+00:00'
+        self.pref_mode_var = mode_var
+        self.pref_custom_entry = custom_entry
+        self.pref_rel_var = rel_var
+        self.pref_preview_label = preview_label
+        self.pref_sample_iso = sample_iso
+
+        def update_preview(*args):
+            mode = mode_var.get()
+            custom_fmt = custom_entry.get()
+            show_rel = bool(rel_var.get())
+            from utils import format_iso_timestamp
+            preview_text = format_iso_timestamp(sample_iso, mode=mode, custom_fmt=custom_fmt, show_relative=show_rel)
+            preview_label.config(text=preview_text)
+
+        # Expose update helper for tests and immediate updates
+        self._update_preferences_preview = update_preview
+
+        # Bind updates
+        mode_var.trace_add('write', update_preview)
+        rel_var.trace_add('write', update_preview)
+        custom_entry.bind('<KeyRelease>', lambda e: update_preview())
+
+        # Initialize preview
+        update_preview()
+
+        def save_prefs():
+            self.config['timestamp_mode'] = mode_var.get()
+            self.config['custom_format'] = custom_entry.get()
+            self.config['show_relative'] = bool(rel_var.get())
+            import config as _c
+            _c.save_config(self.config)
+            messagebox.showinfo("Preferences", "Preferences saved.")
+            self.main_menu()
+        tk.Button(self.root, text="Save", bg="#58D68D", fg="white", command=save_prefs).pack(pady=5)
+        tk.Button(self.root, text="Cancel", bg="#EC7063", fg="white", command=self.main_menu).pack()
+
+        tk.Label(self.root, text="© 2025 IODEX. All rights reserved.", 
+                bg="#AED6F1", font=("Arial", 9, "italic")).pack(side="bottom", pady=5)
     
     def reset_expenses(self):
         """Clear all expense records after user confirmation."""
@@ -213,6 +296,12 @@ class ExpenseTrackerGUI:
             storage.clear_expenses(self.filepath)
             messagebox.showinfo("Reset", "All expenses have been deleted.")
             self.main_menu()
+
+    def _on_exit(self):
+        """Save config and exit cleanly."""
+        import config
+        config.save_config(self.config)
+        self.root.quit()
 
 
 def run_application(filepath: str = DEFAULT_FILENAME):
