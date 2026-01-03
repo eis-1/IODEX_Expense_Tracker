@@ -66,3 +66,57 @@ def test_preferences_preview_updates(tmp_path):
     # Use the compute_preview_text helper to avoid needing a real Tk in the test
     preview = ExpenseTrackerGUI.compute_preview_text('2026-01-03T12:00:00+00:00', 'utc', '%Y-%m-%d %H:%M:%S %Z', False, tz_name='UTC')
     assert 'UTC' in preview or '+00:00' in preview
+
+
+def test_preferences_custom_entry_visibility(tmp_path):
+    # This test requires Tk; skip if not available
+    try:
+        root = tk.Tk()
+        root.withdraw()
+    except tk.TclError:
+        pytest.skip('Tkinter not available')
+
+    app = ExpenseTrackerGUI(root)
+    app.config = config.load_config(path=os.path.join(tmp_path, 'config.json'))
+    app.open_preferences()
+
+    # custom_entry should exist and be disabled in default 'local' mode
+    assert hasattr(app, 'pref_custom_entry')
+    assert app.pref_custom_entry['state'] == 'disabled'
+
+    # Switch to custom and verify it becomes enabled
+    app.pref_mode_var.set('custom')
+    # trigger trace
+    app._update_preferences_preview()
+    assert app.pref_custom_entry['state'] == 'normal'
+    root.destroy()
+
+
+def test_analyze_has_back_buttons():
+    try:
+        root = tk.Tk()
+        root.withdraw()
+    except tk.TclError:
+        pytest.skip('Tkinter not available')
+
+    app = ExpenseTrackerGUI(root)
+
+    # Check analyze screen
+    app.analyze_expenses()
+    found_back = False
+    # Search recursively for buttons with Back text
+    def walk_widgets(widget):
+        for child in widget.winfo_children():
+            try:
+                txt = getattr(child, 'cget', lambda k: '')('text')
+            except Exception:
+                txt = ''
+            if txt in ('🔙 Back', '🔙 Back (bottom)', 'Back'):
+                return True
+            if walk_widgets(child):
+                return True
+        return False
+
+    found_back = walk_widgets(root)
+    assert found_back, 'No Back button found on analyze screen'
+    root.destroy()

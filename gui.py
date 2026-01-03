@@ -249,8 +249,9 @@ class ExpenseTrackerGUI:
 
             tk.Button(self.root, text="⬇ Export Image", bg="#AED6F1", command=lambda: self._export_chart(fig)).pack(pady=2)
             tk.Button(self.root, text="🌐 Open Interactive Chart", bg="#AED6F1", command=lambda: analysis.open_interactive_chart(self.filepath)).pack(pady=2)
-            tk.Button(self.root, text="🔙 Back", bg="#D5DBDB", 
-                     command=self.main_menu).pack(pady=10)
+            # Add another Back button near the top for visibility
+            tk.Button(self.root, text="🔙 Back", bg="#D5DBDB", command=self.main_menu).pack(pady=10)
+            tk.Button(self.root, text="🔙 Back (bottom)", bg="#D5DBDB", command=self.main_menu).pack(pady=10)
         
         except ValueError as e:
             messagebox.showerror("Error", str(e))
@@ -281,6 +282,7 @@ class ExpenseTrackerGUI:
         
         # Timezone selector for world time locations
         tk.Label(self.root, text="Timezone (for explicit selection):", bg="#AED6F1").pack(anchor='w', padx=10, pady=(8,0))
+        import utils
         # Timezone selector (quick list + searchable filter + show all)
         tz_list = utils.sample_timezones(limit=10, include_system=True)
         tz_var = tk.StringVar(value=self.config.get('timezone', 'system'))
@@ -326,12 +328,26 @@ class ExpenseTrackerGUI:
         custom_entry = tk.Entry(self.root, width=40)
         custom_entry.insert(0, self.config.get('custom_format', '%Y-%m-%d %H:%M:%S %Z'))
         custom_entry.pack(anchor='w', padx=20)
-        tk.Label(self.root, text="Example tokens: %Y year, %m month, %d day, %H hour, %M minute, %Z timezone", fg="#555", bg="#AED6F1").pack(anchor='w', padx=20)
+        custom_hint = tk.Label(self.root, text="Enable this by selecting 'Custom format' above. Example tokens: %Y %m %d %H %M %Z", fg="#555", bg="#AED6F1")
+        custom_hint.pack(anchor='w', padx=20)
 
         # Relative time checkbox
         rel_var = tk.BooleanVar(value=self.config.get('show_relative', True))
         tk.Checkbutton(self.root, text="Show relative time (e.g., '2h ago')", variable=rel_var, bg="#AED6F1").pack(anchor='w', padx=10)
 
+        # Enable/disable custom entry based on selection
+        def update_custom_visibility(*args):
+            if mode_var.get() == 'custom':
+                custom_entry.config(state='normal')
+                custom_hint.config(fg="#333")
+            else:
+                custom_entry.config(state='disabled')
+                custom_hint.config(fg="#AAA")
+
+        # Bind the update visibility
+        mode_var.trace_add('write', update_custom_visibility)
+        # Initialize state
+        update_custom_visibility()
         # Live preview area
         tk.Label(self.root, text="Preview:", font=("Arial", 11, "bold"), bg="#AED6F1").pack(anchor='w', pady=(10,0), padx=10)
         preview_label = tk.Label(self.root, text="", bg="#FFFFFF", anchor='w', relief='solid', width=55)
@@ -397,6 +413,8 @@ class ExpenseTrackerGUI:
             messagebox.showinfo("Preferences", "Preferences saved.")
             self.main_menu()
         tk.Button(self.root, text="Save", bg="#58D68D", fg="white", command=save_prefs).pack(pady=5)
+        tk.Frame(self.root, bg="#AED6F1").pack(pady=2)  # spacer
+        tk.Button(self.root, text="Back", bg="#D5DBDB", command=self.main_menu).pack(side='left', padx=20)
         tk.Button(self.root, text="Cancel", bg="#EC7063", fg="white", command=self.main_menu).pack()
 
         tk.Label(self.root, text="© 2025 IODEX. All rights reserved.", 
