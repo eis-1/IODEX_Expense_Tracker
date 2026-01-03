@@ -120,3 +120,29 @@ def sample_timezones(limit:int=10, include_system:bool=True) -> list:
     except Exception:
         fallback = ["system", "UTC", "America/New_York", "Europe/London", "Asia/Tokyo", "Australia/Sydney"]
         return fallback[:limit]
+
+
+def fuzzy_timezones(query: str, limit: int = 50) -> list:
+    """Return a list of timezones matching the query using fuzzy matching.
+
+    Uses difflib.get_close_matches to rank similar timezone names when exact
+    substring matches are not abundant.
+    """
+    import difflib
+    q = (query or '').strip().lower()
+    if not q:
+        return sample_timezones(limit=limit, include_system=True)
+    try:
+        from zoneinfo import available_timezones
+        all_tzs = sorted([tz for tz in available_timezones() if '/' in tz])
+    except Exception:
+        all_tzs = ["America/New_York", "Europe/London", "Asia/Tokyo", "Australia/Sydney"]
+
+    # First prefer simple substring matches
+    subs = [tz for tz in all_tzs if q in tz.lower()]
+    if len(subs) >= min(10, limit):
+        return ["system", "UTC"] + subs[:limit]
+
+    # Otherwise use fuzzy matching
+    scores = difflib.get_close_matches(q, all_tzs, n=limit, cutoff=0.1)
+    return ["system", "UTC"] + scores

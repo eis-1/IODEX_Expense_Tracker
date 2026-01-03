@@ -2,3 +2,5 @@ pillow
 pandas
 matplotlib
 seaborn
+plotly
+pywebview

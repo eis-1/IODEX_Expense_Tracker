@@ -125,14 +125,38 @@ def create_category_chart_plotly(path: str = DEFAULT_FILENAME, top_n: int | None
         raise ValueError(f"Failed to create interactive chart: {str(e)}")
 
 
-def open_interactive_chart(path: str = DEFAULT_FILENAME, top_n: int | None = None):
-    """Open the interactive Plotly chart in the default web browser (creates temp HTML)."""
+def open_interactive_chart(path: str = DEFAULT_FILENAME, top_n: int | None = None, auto_open: bool = True) -> str:
+    """Open the interactive Plotly chart.
+
+    If `pywebview` is available, open in an embedded webview window. Otherwise,
+    write a temporary HTML file and open in the default browser (or return the
+    path when `auto_open` is False).
+    Returns the path to the generated HTML file.
+    """
     fig = create_category_chart_plotly(path, top_n=top_n)
     import plotly.offline as pyo
     import tempfile
     tmp = tempfile.NamedTemporaryFile(suffix='.html', delete=False)
-    pyo.plot(fig, filename=tmp.name, auto_open=True)
-    return tmp.name
+    pyo.plot(fig, filename=tmp.name, auto_open=False)
+    html_path = tmp.name
+
+    if auto_open:
+        # Prefer an embedded window using pywebview if available
+        try:
+            import webview
+            # Create a webview window in a non-blocking fashion
+            def _open():
+                webview.create_window('Interactive Chart', html_path)
+                webview.start()
+            import threading
+            t = threading.Thread(target=_open, daemon=True)
+            t.start()
+        except Exception:
+            # Fallback to opening in the default browser
+            import webbrowser
+            webbrowser.open(f'file://{html_path}')
+
+    return html_path
 
 
 def create_category_chart_db(db: ExpenseDatabase):

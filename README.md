@@ -192,6 +192,11 @@ Notes
 - The application will create `expenses.txt` automatically in the current working directory on first save.
 - Optionally place an image named `photo1.jpg` next to `gui_expense_tracker.py` to use as the background; otherwise a solid color background is used.
 
+Optional dependencies
+
+- `pywebview` (optional) — If installed, the application will try to open interactive Plotly charts in an embedded native window. On some platforms (notably Windows) `pywebview` may require additional native build tools; if `pywebview` is not available the app will fall back to opening interactive charts in your system web browser.
+- `plotly` — Required for generating interactive charts. If `plotly` is not installed the app will still produce static charts via `matplotlib`/`seaborn`.
+
 ## Usage guide
 
 Primary workflows

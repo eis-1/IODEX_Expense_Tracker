@@ -310,17 +310,13 @@ class ExpenseTrackerGUI:
         tk.Checkbutton(self.root, text="Show all timezones", variable=show_all_var, command=toggle_show_all, bg="#AED6F1").pack(anchor='w', padx=20)
 
         def filter_timezones(*args):
-            q = search_var.get().lower().strip()
+            q = search_var.get().strip()
             if not q:
                 tz_combo['values'] = utils.sample_timezones(limit=10, include_system=True)
                 return
-            try:
-                from zoneinfo import available_timezones
-                all_tzs = sorted([tz for tz in available_timezones() if "/" in tz])
-            except Exception:
-                all_tzs = ["America/New_York", "Europe/London", "Asia/Tokyo", "Australia/Sydney"]
-            filtered = [tz for tz in all_tzs if q in tz.lower()]
-            tz_combo['values'] = ["system", "UTC"] + filtered[:200]
+            # Use fuzzy_timezones utility for better UX
+            matches = utils.fuzzy_timezones(q, limit=200)
+            tz_combo['values'] = matches
 
         search_var.trace_add('write', filter_timezones)
         # Custom format entry with hint
