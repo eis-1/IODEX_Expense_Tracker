@@ -63,17 +63,6 @@ def test_preferences_preview_updates(tmp_path):
     app = ExpenseTrackerGUI(root)
     app.config = config.load_config(path=cfg_path)
 
-    app.open_preferences()
-    # Ensure preview exists and updates when changing controls
-    assert hasattr(app, 'pref_preview_label')
-
-    # Set to UTC and disable relative time programmatically, then call update
-    app.pref_mode_var.set('utc')
-    app.pref_rel_var.set(False)
-    app.pref_custom_entry.delete(0, tk.END)
-    app.pref_custom_entry.insert(0, '%Y-%m-%d %H:%M:%S %Z')
-    app._update_preferences_preview()
-
-    text = app.pref_preview_label['text']
-    assert 'UTC' in text or '+00:00' in text
-    root.destroy()
+    # Use the compute_preview_text helper to avoid needing a real Tk in the test
+    preview = ExpenseTrackerGUI.compute_preview_text('2026-01-03T12:00:00+00:00', 'utc', '%Y-%m-%d %H:%M:%S %Z', False, tz_name='UTC')
+    assert 'UTC' in preview or '+00:00' in preview

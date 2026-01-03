@@ -1,17 +1,20 @@
 """
 Analysis module for expense data visualization and aggregation.
 Generates charts and summary statistics for expense data.
+Supports both CSV (legacy) and SQLite (current) storage backends.
 """
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import csv
+import os
 from storage import load_expenses, DEFAULT_FILENAME
+from database import ExpenseDatabase
 
 
 def get_category_totals(path: str = DEFAULT_FILENAME) -> dict:
     """
-    Calculate total expenses grouped by category.
+    Calculate total expenses grouped by category (CSV mode).
     
     Args:
         path: File path to read from (defaults to expenses.txt)
@@ -26,7 +29,7 @@ def get_category_totals(path: str = DEFAULT_FILENAME) -> dict:
         return {}
     
     category_totals = {}
-    for category, amount, _ in expenses:
+    for category, amount, *_ in expenses:
         if category in category_totals:
             category_totals[category] += amount
         else:
@@ -35,12 +38,76 @@ def get_category_totals(path: str = DEFAULT_FILENAME) -> dict:
     return category_totals
 
 
-def create_category_chart(path: str = DEFAULT_FILENAME):
+def get_category_totals_db(db: ExpenseDatabase) -> dict:
     """
-    Create a bar chart of total expenses by category.
+    Calculate total expenses grouped by category (Database mode).
     
     Args:
+        db: ExpenseDatabase instance
+    
+    Returns:
+        Dictionary with category names as keys and total amounts as values.
+    """
+    return db.get_category_totals()
+
+
+def create_category_chart(path: str = DEFAULT_FILENAME, top_n: int | None = None):
+    """
+    Create an improved bar chart of total expenses by category (CSV mode).
+
+    Args:
         path: File path to read from (defaults to expenses.txt)
+        top_n: If provided, show only the top N categories
+
+    Returns:
+        matplotlib figure object ready for embedding in GUI
+
+    Raises:
+        ValueError: If no expense data exists
+    """
+    try:
+        df = pd.read_csv(path, names=["Category", "Amount", "Description", "Timestamp"], 
+                        on_bad_lines='skip', quoting=csv.QUOTE_ALL)
+
+        if df.empty:
+            raise ValueError("No expense data available for analysis.")
+
+        df["Amount"] = pd.to_numeric(df["Amount"], errors='coerce')
+        category_totals = df.groupby("Category")["Amount"].sum().sort_values(ascending=False)
+
+        if top_n is not None:
+            category_totals = category_totals.head(top_n)
+
+        # Modern style and palette
+        sns.set_theme(style='whitegrid')
+        fig, ax = plt.subplots(figsize=(8, max(4, 0.5 * len(category_totals))))
+        colors = sns.color_palette("viridis", len(category_totals))
+        bars = ax.barh(category_totals.index[::-1], category_totals.values[::-1], color=colors)
+
+        ax.set_title("Total Expenses by Category")
+        ax.set_xlabel("Amount ($)")
+        ax.set_ylabel("")
+
+        # Annotate bars with amounts and percentages
+        total = category_totals.sum()
+        for bar, value in zip(bars, category_totals.values[::-1]):
+            w = bar.get_width()
+            pct = (value / total * 100) if total != 0 else 0
+            ax.text(w + total * 0.005, bar.get_y() + bar.get_height() / 2, f"${w:.2f} ({pct:.0f}%)", va='center')
+
+        fig.tight_layout()
+        return fig
+
+    except Exception as e:
+        raise ValueError(f"Failed to create chart: {str(e)}")
+
+
+def create_category_chart_db(db: ExpenseDatabase):
+    """
+    Create a bar chart of total expenses by category (Database mode).
+    
+    Args:
+        db: ExpenseDatabase instance
     
     Returns:
         matplotlib figure object ready for embedding in GUI
@@ -49,14 +116,13 @@ def create_category_chart(path: str = DEFAULT_FILENAME):
         ValueError: If no expense data exists
     """
     try:
-        df = pd.read_csv(path, names=["Category", "Amount", "Description"], 
-                        on_bad_lines='skip', quoting=csv.QUOTE_ALL)
+        category_totals_dict = db.get_category_totals()
         
-        if df.empty:
+        if not category_totals_dict:
             raise ValueError("No expense data available for analysis.")
         
-        df["Amount"] = pd.to_numeric(df["Amount"], errors='coerce')
-        category_totals = df.groupby("Category")["Amount"].sum().sort_values()
+        # Convert to Series for plotting
+        category_totals = pd.Series(category_totals_dict).sort_values()
         
         fig, ax = plt.subplots(figsize=(6, 4))
         sns.barplot(x=category_totals.values, y=category_totals.index, 
@@ -74,7 +140,7 @@ def create_category_chart(path: str = DEFAULT_FILENAME):
 
 def get_summary_stats(path: str = DEFAULT_FILENAME) -> dict:
     """
-    Generate summary statistics for expense data.
+    Generate summary statistics for expense data (CSV mode).
     
     Args:
         path: File path to read from (defaults to expenses.txt)
@@ -93,7 +159,7 @@ def get_summary_stats(path: str = DEFAULT_FILENAME) -> dict:
             'max_category': None
         }
     
-    amounts = [amount for _, amount, _ in expenses]
+    amounts = [exp[1] for exp in expenses]
     category_totals = get_category_totals(path)
     
     total = sum(amounts)
@@ -106,3 +172,16 @@ def get_summary_stats(path: str = DEFAULT_FILENAME) -> dict:
         'count': len(expenses),
         'max_category': max_category
     }
+
+
+def get_summary_stats_db(db: ExpenseDatabase) -> dict:
+    """
+    Generate summary statistics for expense data (Database mode).
+    
+    Args:
+        db: ExpenseDatabase instance
+    
+    Returns:
+        Dictionary with comprehensive statistics
+    """
+    return db.get_statistics()

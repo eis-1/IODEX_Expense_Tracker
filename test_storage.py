@@ -8,12 +8,14 @@ import pytest
 import os
 import tempfile
 import csv
+from datetime import datetime
 from storage import (
     append_expense,
     load_expenses,
     get_total_spent,
     clear_expenses,
-    file_exists
+    file_exists,
+    delete_expense
 )
 
 
@@ -36,7 +38,10 @@ class TestAppendExpense:
         append_expense("Food", 10.50, "Lunch", temp_file)
         expenses = load_expenses(temp_file)
         assert len(expenses) == 1
-        assert expenses[0] == ("Food", 10.50, "Lunch")
+        assert expenses[0][:3] == ("Food", 10.50, "Lunch")
+        # Ensure timestamp is present and timezone-aware
+        dt = datetime.fromisoformat(expenses[0][3])
+        assert dt.tzinfo is not None
     
     def test_append_multiple_expenses(self, temp_file):
         """Test appending multiple expenses."""
@@ -71,7 +76,7 @@ class TestAppendExpense:
         append_expense("Utilities", 50.00, "", temp_file)
         expenses = load_expenses(temp_file)
         assert len(expenses) == 1
-        assert expenses[0] == ("Utilities", 50.00, "")
+        assert expenses[0][:3] == ("Utilities", 50.00, "")
     
     def test_append_zero_amount(self, temp_file):
         """Test appending with zero amount."""
@@ -139,7 +144,7 @@ class TestLoadExpenses:
         append_expense("Food", 15.00, "Lunch", temp_file)
         expenses = load_expenses(temp_file)
         assert len(expenses) == 1
-        assert expenses[0] == ("Food", 15.00, "Lunch")
+        assert expenses[0][:3] == ("Food", 15.00, "Lunch")
     
     def test_load_multiple_expenses(self, temp_file):
         """Test loading multiple expenses maintains order."""
@@ -155,7 +160,7 @@ class TestLoadExpenses:
     
     def test_load_skips_malformed_rows_invalid_amount(self, temp_file):
         """Test that rows with invalid amounts are skipped."""
-        with open(temp_file, "w", newline="") as f:
+        with open(temp_file, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(["Food", 10.00, "Valid"])
             writer.writerow(["Rent", "invalid", "Skip this"])
@@ -168,7 +173,7 @@ class TestLoadExpenses:
     
     def test_load_skips_negative_amounts(self, temp_file):
         """Test that rows with negative amounts are skipped."""
-        with open(temp_file, "w", newline="") as f:
+        with open(temp_file, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(["Food", 10.00, "Valid"])
             writer.writerow(["Refund", -50.00, "Skip negative"])
@@ -179,7 +184,7 @@ class TestLoadExpenses:
     
     def test_load_skips_incomplete_rows(self, temp_file):
         """Test that rows with < 3 fields are skipped."""
-        with open(temp_file, "w", newline="") as f:
+        with open(temp_file, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(["Food", 10.00, "Valid"])
             writer.writerow(["Incomplete"])
@@ -191,7 +196,7 @@ class TestLoadExpenses:
     
     def test_load_handles_quoted_fields(self, temp_file):
         """Test that quoted CSV fields are properly parsed."""
-        with open(temp_file, "w", newline="") as f:
+        with open(temp_file, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(["Food", 15.00, "Complex, description with, commas"])
         
@@ -238,7 +243,7 @@ class TestGetTotalSpent:
     def test_total_skips_malformed_rows(self, temp_file):
         """Test that malformed rows don't affect total."""
         append_expense("Food", 10.00, "", temp_file)
-        with open(temp_file, "a", newline="") as f:
+        with open(temp_file, "a", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(["Invalid", "abc", ""])
         append_expense("Rent", 50.00, "", temp_file)
@@ -260,6 +265,17 @@ class TestClearExpenses:
         expenses = load_expenses(temp_file)
         assert expenses == []
         assert get_total_spent(temp_file) == 0.0
+
+    def test_delete_expense(self, temp_file):
+        """Test deleting an expense by matching fields."""
+        append_expense("Food", 10.00, "Lunch", temp_file, timestamp='2026-01-03T12:00:00+00:00')
+        append_expense("Rent", 500.00, "Monthly", temp_file, timestamp='2026-01-03T12:00:01+00:00')
+
+        deleted = delete_expense("Food", 10.00, "Lunch", '2026-01-03T12:00:00+00:00', path=temp_file)
+        assert deleted
+        expenses = load_expenses(temp_file)
+        assert len(expenses) == 1
+        assert expenses[0][:3] == ("Rent", 500.00, "Monthly")
     
     def test_clear_empty_file(self, temp_file):
         """Test clearing an empty file."""

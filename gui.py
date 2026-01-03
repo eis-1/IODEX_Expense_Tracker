@@ -190,12 +190,47 @@ class ExpenseTrackerGUI:
         tk.Label(self.root, text=f"💰 Total Spent: ${total:.2f}", 
                 font=("Arial", 12, "bold"), bg="#AED6F1").pack(pady=10)
         
+        tk.Button(self.root, text="Delete Selected", bg="#F5B7B1", command=lambda: self._delete_selected(tree)).pack(pady=2)
         tk.Button(self.root, text="🔙 Back", bg="#D5DBDB", 
                  command=self.main_menu).pack(pady=10)
         
         tk.Label(self.root, text="© 2025 IODEX. All rights reserved.", 
                 bg="#AED6F1", font=("Arial", 9, "italic")).pack(side="bottom", pady=5)
-    
+
+    def _delete_selected(self, tree: ttk.Treeview):
+        """Delete the selected rows from storage after confirmation.
+
+        This method handles CSV-based storage deletion by identifying the expense
+        from the tree values (category, $amount, description, timestamp).
+        """
+        selected = tree.selection()
+        if not selected:
+            messagebox.showinfo("Delete", "Please select one or more expenses to delete.")
+            return
+
+        if not messagebox.askyesno("Delete", "Are you sure you want to delete the selected expense(s)?"):
+            return
+
+        deleted_any = False
+        for item in selected:
+            vals = tree.item(item)['values']
+            # Expect values: (category, '$amount', description, timestamp)
+            category = vals[0]
+            amount_str = str(vals[1]).lstrip('$').replace(',', '')
+            try:
+                amount = float(amount_str)
+            except Exception:
+                continue
+            description = vals[2]
+            timestamp = vals[3] if len(vals) >= 4 else None
+            if storage.delete_expense(category, amount, description, timestamp, path=self.filepath):
+                deleted_any = True
+
+        if deleted_any:
+            messagebox.showinfo("Delete", "Selected expenses have been deleted.")
+            self.view_expenses()
+        else:
+            messagebox.showinfo("Delete", "No matching expenses were found to delete.")    
     def analyze_expenses(self):
         """Display analysis chart of expenses by category."""
         self._clear_window()
@@ -207,17 +242,27 @@ class ExpenseTrackerGUI:
         
         try:
             fig = analysis.create_category_chart(self.filepath)
-            
+
             canvas = FigureCanvasTkAgg(fig, master=self.root)
             canvas.draw()
             canvas.get_tk_widget().pack(pady=20)
-            
+
+            tk.Button(self.root, text="⬇ Export Image", bg="#AED6F1", command=lambda: self._export_chart(fig)).pack(pady=2)
             tk.Button(self.root, text="🔙 Back", bg="#D5DBDB", 
                      command=self.main_menu).pack(pady=10)
         
         except ValueError as e:
             messagebox.showerror("Error", str(e))
             self.main_menu()
+
+    def _export_chart(self, fig):
+        """Export the current matplotlib figure to a PNG file."""
+        import tkinter.filedialog as fd
+        path = fd.asksaveasfilename(defaultextension='.png', filetypes=[('PNG', '*.png')])
+        if not path:
+            return
+        fig.savefig(path)
+        messagebox.showinfo('Export', f'Chart exported to {path}')
 
     def open_preferences(self):
         """Open a preferences dialog to let users choose timestamp display options."""
@@ -232,6 +277,17 @@ class ExpenseTrackerGUI:
         tk.Radiobutton(self.root, text="Local time", variable=mode_var, value='local', bg="#AED6F1").pack(anchor='w', padx=20)
         tk.Radiobutton(self.root, text="UTC (Coordinated Universal Time)", variable=mode_var, value='utc', bg="#AED6F1").pack(anchor='w', padx=20)
         tk.Radiobutton(self.root, text="Custom format", variable=mode_var, value='custom', bg="#AED6F1").pack(anchor='w', padx=20)
+        
+        # Timezone selector for world time locations
+        tk.Label(self.root, text="Timezone (for explicit selection):", bg="#AED6F1").pack(anchor='w', padx=10, pady=(8,0))
+        try:
+            from zoneinfo import available_timezones
+            tz_list = sorted(["system", "UTC"] + [tz for tz in list(available_timezones()) if "/" in tz])[:200]
+        except Exception:
+            tz_list = ["system", "UTC", "America/New_York", "Europe/London", "Asia/Tokyo", "Australia/Sydney"]
+        tz_var = tk.StringVar(value=self.config.get('timezone', 'system'))
+        tz_combo = ttk.Combobox(self.root, values=tz_list, textvariable=tz_var, width=40)
+        tz_combo.pack(anchor='w', padx=20)
 
         # Custom format entry with hint
         tk.Label(self.root, text="Custom strftime format (advanced):", bg="#AED6F1").pack(anchor='w', padx=10)
@@ -256,13 +312,31 @@ class ExpenseTrackerGUI:
         self.pref_rel_var = rel_var
         self.pref_preview_label = preview_label
         self.pref_sample_iso = sample_iso
+        self.pref_tz_var = tz_var
 
         def update_preview(*args):
             mode = mode_var.get()
             custom_fmt = custom_entry.get()
             show_rel = bool(rel_var.get())
+            tz = tz_var.get()
             from utils import format_iso_timestamp
-            preview_text = format_iso_timestamp(sample_iso, mode=mode, custom_fmt=custom_fmt, show_relative=show_rel)
+            preview_text = format_iso_timestamp(sample_iso, mode=mode, custom_fmt=custom_fmt, show_relative=show_rel, tz_name=tz)
+            preview_label.config(text=preview_text)
+
+        # Bind updates
+        mode_var.trace_add('write', update_preview)
+        rel_var.trace_add('write', update_preview)
+        tz_var.trace_add('write', update_preview)
+        custom_entry.bind('<KeyRelease>', lambda e: update_preview())
+
+
+        def update_preview(*args):
+            mode = mode_var.get()
+            custom_fmt = custom_entry.get()
+            show_rel = bool(rel_var.get())
+            tz = self.config.get('timezone', 'system')
+            from utils import format_iso_timestamp
+            preview_text = format_iso_timestamp(sample_iso, mode=mode, custom_fmt=custom_fmt, show_relative=show_rel, tz_name=tz)
             preview_label.config(text=preview_text)
 
         # Expose update helper for tests and immediate updates
@@ -275,6 +349,12 @@ class ExpenseTrackerGUI:
 
         # Initialize preview
         update_preview()
+
+    @staticmethod
+    def compute_preview_text(sample_iso: str, mode: str, custom_fmt: str, show_rel: bool, tz_name: str = 'system') -> str:
+        """Return the preview text without creating GUI elements (used by tests)."""
+        from utils import format_iso_timestamp
+        return format_iso_timestamp(sample_iso, mode=mode, custom_fmt=custom_fmt, show_relative=show_rel, tz_name=tz_name)
 
         def save_prefs():
             self.config['timestamp_mode'] = mode_var.get()
