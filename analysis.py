@@ -102,6 +102,39 @@ def create_category_chart(path: str = DEFAULT_FILENAME, top_n: int | None = None
         raise ValueError(f"Failed to create chart: {str(e)}")
 
 
+# Plotly integration for interactive charts
+def create_category_chart_plotly(path: str = DEFAULT_FILENAME, top_n: int | None = None):
+    """
+    Create an interactive Plotly bar chart (returns a Plotly Figure)
+    """
+    try:
+        import plotly.express as px
+        df = pd.read_csv(path, names=["Category", "Amount", "Description", "Timestamp"], on_bad_lines='skip', quoting=csv.QUOTE_ALL)
+        if df.empty:
+            raise ValueError("No expense data available for analysis.")
+        df["Amount"] = pd.to_numeric(df["Amount"], errors='coerce')
+        category_totals = df.groupby("Category")["Amount"].sum().reset_index().sort_values(by="Amount", ascending=False)
+        if top_n is not None:
+            category_totals = category_totals.head(top_n)
+        total = category_totals["Amount"].sum()
+        category_totals["pct"] = (category_totals["Amount"] / total * 100).round(1)
+        fig = px.bar(category_totals, x="Amount", y="Category", orientation='h', color="Amount", color_continuous_scale='Viridis', hover_data={"Amount":":.2f", "pct":"auto"})
+        fig.update_layout(title_text="Total Expenses by Category (interactive)", yaxis={'categoryorder':'total ascending'})
+        return fig
+    except Exception as e:
+        raise ValueError(f"Failed to create interactive chart: {str(e)}")
+
+
+def open_interactive_chart(path: str = DEFAULT_FILENAME, top_n: int | None = None):
+    """Open the interactive Plotly chart in the default web browser (creates temp HTML)."""
+    fig = create_category_chart_plotly(path, top_n=top_n)
+    import plotly.offline as pyo
+    import tempfile
+    tmp = tempfile.NamedTemporaryFile(suffix='.html', delete=False)
+    pyo.plot(fig, filename=tmp.name, auto_open=True)
+    return tmp.name
+
+
 def create_category_chart_db(db: ExpenseDatabase):
     """
     Create a bar chart of total expenses by category (Database mode).

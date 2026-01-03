@@ -248,6 +248,7 @@ class ExpenseTrackerGUI:
             canvas.get_tk_widget().pack(pady=20)
 
             tk.Button(self.root, text="⬇ Export Image", bg="#AED6F1", command=lambda: self._export_chart(fig)).pack(pady=2)
+            tk.Button(self.root, text="🌐 Open Interactive Chart", bg="#AED6F1", command=lambda: analysis.open_interactive_chart(self.filepath)).pack(pady=2)
             tk.Button(self.root, text="🔙 Back", bg="#D5DBDB", 
                      command=self.main_menu).pack(pady=10)
         
@@ -280,15 +281,46 @@ class ExpenseTrackerGUI:
         
         # Timezone selector for world time locations
         tk.Label(self.root, text="Timezone (for explicit selection):", bg="#AED6F1").pack(anchor='w', padx=10, pady=(8,0))
-        try:
-            from zoneinfo import available_timezones
-            tz_list = sorted(["system", "UTC"] + [tz for tz in list(available_timezones()) if "/" in tz])[:200]
-        except Exception:
-            tz_list = ["system", "UTC", "America/New_York", "Europe/London", "Asia/Tokyo", "Australia/Sydney"]
+        # Timezone selector (quick list + searchable filter + show all)
+        tz_list = utils.sample_timezones(limit=10, include_system=True)
         tz_var = tk.StringVar(value=self.config.get('timezone', 'system'))
+
+        search_var = tk.StringVar(value='')
+        tk.Label(self.root, text="Search timezones:", bg="#AED6F1").pack(anchor='w', padx=20)
+        search_entry = tk.Entry(self.root, textvariable=search_var, width=40)
+        search_entry.pack(anchor='w', padx=20)
+
         tz_combo = ttk.Combobox(self.root, values=tz_list, textvariable=tz_var, width=40)
         tz_combo.pack(anchor='w', padx=20)
 
+        show_all_var = tk.BooleanVar(value=False)
+        def toggle_show_all():
+            if show_all_var.get():
+                # load full list (may be large)
+                try:
+                    from zoneinfo import available_timezones
+                    full = sorted([tz for tz in list(available_timezones()) if "/" in tz])
+                    tz_combo['values'] = ["system", "UTC"] + full
+                except Exception:
+                    tz_combo['values'] = ["system", "UTC", "America/New_York", "Europe/London", "Asia/Tokyo", "Australia/Sydney"]
+            else:
+                tz_combo['values'] = utils.sample_timezones(limit=10, include_system=True)
+        tk.Checkbutton(self.root, text="Show all timezones", variable=show_all_var, command=toggle_show_all, bg="#AED6F1").pack(anchor='w', padx=20)
+
+        def filter_timezones(*args):
+            q = search_var.get().lower().strip()
+            if not q:
+                tz_combo['values'] = utils.sample_timezones(limit=10, include_system=True)
+                return
+            try:
+                from zoneinfo import available_timezones
+                all_tzs = sorted([tz for tz in available_timezones() if "/" in tz])
+            except Exception:
+                all_tzs = ["America/New_York", "Europe/London", "Asia/Tokyo", "Australia/Sydney"]
+            filtered = [tz for tz in all_tzs if q in tz.lower()]
+            tz_combo['values'] = ["system", "UTC"] + filtered[:200]
+
+        search_var.trace_add('write', filter_timezones)
         # Custom format entry with hint
         tk.Label(self.root, text="Custom strftime format (advanced):", bg="#AED6F1").pack(anchor='w', padx=10)
         custom_entry = tk.Entry(self.root, width=40)
