@@ -67,7 +67,8 @@ Major components
 
 - `expenses.txt` — Persistent storage (CSV format).
 
-  - Each expense is stored as: `Category,Amount,Description`.
+  - Each expense is stored as: `Category,Amount,Description,Timestamp` (ISO-8601 UTC).
+  - Timestamps are stored in UTC and displayed in the GUI in local time by default; users can change formatting in Preferences.
   - Uses proper CSV quoting to handle special characters in fields.
 
 - Third-party libraries for analysis and visualization:
@@ -126,7 +127,10 @@ Completed improvements
 ✅ **CSV module integration** — Replaced naive splitting with Python's `csv` module.  
 ✅ **Modular refactoring** — Separated GUI, storage, and analysis into distinct modules.  
 ✅ **Storage abstraction** — Added path parameter to all storage functions for flexibility.  
-✅ **Unit test suite** — Created 39 comprehensive tests with pytest.
+✅ **Unit test suite** — Created an extensive pytest suite (now **71 tests** covering storage, database, import/export, backups, utils, and GUI behaviors).
+✅ **Timestamps & Preferences** — Each expense now records an ISO-8601 UTC `Timestamp`; the GUI shows timestamps in local time by default and a new **Preferences** dialog lets users choose `local`, `UTC`, or a `custom` strftime format and toggle relative time display (e.g., "2h ago").
+✅ **Config persistence** — Added `config.py` (persists to `config.json`) to remember UI preferences across runs.
+✅ **Formatting utilities & tests** — Added `utils.py` for timezone-aware formatting and `test_utils.py` / `test_gui.py` to validate formatting and preferences behavior.
 
 Future considerations
 
