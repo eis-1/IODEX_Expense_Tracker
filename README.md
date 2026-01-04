@@ -204,6 +204,22 @@ After launching, you'll see the **Main Menu**:
    - **Interactive** — Open Plotly chart (if installed)
 4. **Click 🔙 Back** to return to main menu
 
+Quick script: generate & save a chart from the DB
+
+```python
+# demo_chart.py
+from analysis import create_category_chart
+fig = create_category_chart('expenses.db')  # uses SQLite DB by default
+fig.savefig('category_chart.png')
+print('Saved category_chart.png')
+```
+
+Run it with:
+
+```bash
+python demo_chart.py
+```
+
 ### Workflow 4: Configuring Preferences
 
 1. **Click** `⚙️ Preferences` from main menu
@@ -298,6 +314,19 @@ python migrate_to_db.py --src expenses.txt --dst expenses.db
 ```
 
 This will import all your legacy expenses into the database, preserving timestamps and descriptions.
+
+Quick GUI migration flow:
+
+1. Start the app (`python gui_expense_tracker.py`).
+2. If a legacy `expenses.txt` is detected, you'll see a **Migrate Now** prompt.
+3. Click **Migrate Now** to run the migration (safe & non-destructive).
+
+Example: Verify migration
+
+```bash
+# After migration, list totals via the database helper
+python -c "from database import ExpenseDatabase; db=ExpenseDatabase('expenses.db'); print(db.get_category_totals())"
+```
 
 IODEX includes **comprehensive test coverage**:
 
@@ -496,7 +525,18 @@ Shopping,120.00,"Clothes and shoes",2026-01-01T09:15:00+00:00
 
 ---
 
-## 🔮 Future Roadmap
+## � Changelog (Recent Changes)
+
+- **Default storage switched to SQLite (`expenses.db`)** for improved performance and reliability while keeping backward compatibility with legacy CSV (`expenses.txt`). ✅
+- **Migration tools added**: a GUI prompt on first run and a CLI tool `migrate_to_db.py` to migrate legacy CSV into the database preserving timestamps and descriptions. ✅
+- **Analysis updated** to work with both CSV and SQLite backends (charts and summary statistics). ✅
+- **Unit tests added** to validate CSV vs DB behavior for analysis functions and storage migration. ✅
+
+> Tip: These changes are backwards compatible — if you prefer the old CSV file you can keep using `expenses.txt` and nothing will break.
+
+---
+
+## �🔮 Future Roadmap
 
 ### Short-term (Next Release)
 
