@@ -94,7 +94,7 @@ IODEX has been fully implemented as a **professional-grade desktop expense track
 ✅ expenses.txt             — Runtime data (auto-created)
 ✅ config.json              — User prefs (auto-created)
 ✅ requirements.txt         — Dependencies
-✅ .github/copilot-instructions.md — AI guidelines
+✅ copilot-instructions.md — AI guidelines
 ```
 
 ---

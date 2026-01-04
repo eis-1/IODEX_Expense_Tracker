@@ -54,7 +54,7 @@
 
 ### 🤖 **Development Guidelines**
 
-- **[.github/copilot-instructions.md](.github/copilot-instructions.md)** — AI coding guidelines
+- **[copilot-instructions.md](copilot-instructions.md)** — AI coding guidelines
   - Code patterns and conventions
   - File descriptions
   - Development workflows
@@ -74,7 +74,7 @@ IODEX_Expense_Tracker/
 │  ├─ TEST_RESULTS.md                   ← Test results
 │  ├─ REFACTORING_SUMMARY.md            ← Development history
 │  ├─ DOCUMENTATION_INDEX.md            ← This file
-│  └─ .github/copilot-instructions.md   ← AI guidelines
+│  └─ copilot-instructions.md   ← AI guidelines
 │
 ├─ 🎨 APPLICATION
 │  ├─ gui_expense_tracker.py            ← Entry point
@@ -122,7 +122,7 @@ IODEX_Expense_Tracker/
 ### 👨‍💻 For Developers
 
 1. Read: **[README.md](README.md)** — Architecture section
-2. Review: **[.github/copilot-instructions.md](.github/copilot-instructions.md)** — Code patterns
+2. Review: **[copilot-instructions.md](copilot-instructions.md)** — Code patterns
 3. Run Tests: `pytest -q` (see **[TESTING_GUIDE.md](TESTING_GUIDE.md)**)
 4. Explore: Check **[REFACTORING_SUMMARY.md](REFACTORING_SUMMARY.md)** for recent changes
 5. Contribute: See Contributing section in README
@@ -141,7 +141,7 @@ IODEX_Expense_Tracker/
 2. Code Quality: Review Python files and docstrings
 3. Testing: **[TESTING_GUIDE.md](TESTING_GUIDE.md)** — Learn testing patterns
 4. Refactoring: **[REFACTORING_SUMMARY.md](REFACTORING_SUMMARY.md)** — See improvements
-5. Patterns: **[.github/copilot-instructions.md](.github/copilot-instructions.md)** — Code patterns
+5. Patterns: **[copilot-instructions.md](copilot-instructions.md)** — Code patterns
 
 ---
 
@@ -236,7 +236,7 @@ IODEX_Expense_Tracker/
 - Improvements made
 - Refactoring work
 
-### .github/copilot-instructions.md
+### copilot-instructions.md
 
 **AI coding guidelines**
 
@@ -330,16 +330,16 @@ IODEX_Expense_Tracker/
 
 ## 📞 Support Resources
 
-| Need                    | Resource                                                           |
-| ----------------------- | ------------------------------------------------------------------ |
-| **How to use?**         | [README.md](README.md#-usage-guide)                                |
-| **How to install?**     | [README.md](README.md#-installation)                               |
-| **Having issues?**      | [README.md](README.md#-troubleshooting)                            |
-| **Want to contribute?** | [README.md](README.md#-contributing)                               |
-| **See project status?** | [PROJECT_STATUS.md](PROJECT_STATUS.md)                             |
-| **Check test results?** | [TEST_RESULTS.md](TEST_RESULTS.md)                                 |
-| **Learn to test?**      | [TESTING_GUIDE.md](TESTING_GUIDE.md)                               |
-| **See code patterns?**  | [.github/copilot-instructions.md](.github/copilot-instructions.md) |
+| Need                    | Resource                                           |
+| ----------------------- | -------------------------------------------------- |
+| **How to use?**         | [README.md](README.md#-usage-guide)                |
+| **How to install?**     | [README.md](README.md#-installation)               |
+| **Having issues?**      | [README.md](README.md#-troubleshooting)            |
+| **Want to contribute?** | [README.md](README.md#-contributing)               |
+| **See project status?** | [PROJECT_STATUS.md](PROJECT_STATUS.md)             |
+| **Check test results?** | [TEST_RESULTS.md](TEST_RESULTS.md)                 |
+| **Learn to test?**      | [TESTING_GUIDE.md](TESTING_GUIDE.md)               |
+| **See code patterns?**  | [copilot-instructions.md](copilot-instructions.md) |
 
 ---
 
