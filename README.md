@@ -1,29 +1,192 @@
 # 📊 IODEX — Desktop Expense Tracker
 
-![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
-![Tests](https://img.shields.io/badge/Tests-80%20Passing-brightgreen)
-![Status](https://img.shields.io/badge/Status-Production%20Ready-blue)
+![Python](https://img.shields.io/badge/Python-3.8%2B-blue) ![License](https://img.shields.io/badge/License-MIT-green) ![Tests](https://img.shields.io/badge/Tests-84%20Passing-brightgreen) ![Status](https://img.shields.io/badge/Status-Production%20Ready-blue)
 
-**IODEX** is a **professional-grade, single-user desktop expense tracker** built with Python and Tkinter. It now uses a modern SQLite database (`expenses.db`) for fast, reliable storage by default, with seamless migration from legacy CSV (`expenses.txt`).
+IODEX is a single-user, desktop expense tracker written in Python with a simple Tkinter GUI and a robust storage layer. The app uses an SQLite database (`expenses.db`) as the default storage backend and provides helpers to migrate from the legacy CSV file format (`expenses.txt`) when present.
 
-> **Perfect for**: Personal budgeting, expense tracking, financial analysis, and educational projects on GUI development and data persistence.
+This repository contains the application, packaging helpers for Windows (PyInstaller), unit tests (pytest), and utility scripts for migrating and exporting data.
 
 ---
 
 ## 🎯 Quick Navigation
 
-- [Features](#-features) — What IODEX can do
-- [Quick Start](#-quick-start) — Get running in 30 seconds
-- [Installation](#-installation) — Detailed setup guide
-- [Usage Guide](#-usage-guide) — How to use each feature
-- [Project Structure](#-project-structure) — What's in the repo
-- [Testing](#-testing) — Test suite and coverage
-- [Architecture](#-architecture--design) — How it works
-- [Configuration](#-configuration) — User preferences
-- [Future Roadmap](#-future-roadmap) — Coming soon
-- [Contributing](#-contributing) — How to help
-- [Troubleshooting](#-troubleshooting) — Common issues
+- [Features](#-features)
+- [Quick Start](#-quick-start)
+- [Installation](#-installation)
+- [Usage Guide](#-usage-guide)
+- [Project Structure](#-project-structure)
+- [Testing](#-testing)
+- [Packaging & Release](#-packaging--release)
+- [Migration](#-migration)
+- [Configuration](#-configuration)
+- [Contributing](#-contributing)
+- [Troubleshooting](#-troubleshooting)
+- [License](#-license)
+
+---
+
+## ✨ Features
+
+- Add, view, and delete expense entries (category, amount, description, timestamp) ✅
+- Defaults to SQLite (`expenses.db`) for reliable persistence; CSV (`expenses.txt`) is supported for legacy imports ✅
+- Category-wise analysis and charts (matplotlib; optional plotly) 📊
+- Timezone-aware timestamps and relative time display 🌍
+- Preferences persisted to `config.json` (timezone, display format) ⚙️
+- Tests cover storage, analysis, utils, and CLI helpers (pytest) ✅
+
+---
+
+## 🚀 Quick Start
+
+1. Clone repository:
+
+```bash
+git clone https://github.com/eis-1/IODEX_Expense_Tracker.git
+cd IODEX_Expense_Tracker
+```
+
+2. Create and activate virtual environment (Windows):
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+3. Run the app:
+
+```bash
+python gui_expense_tracker.py
+```
+
+The app will create `expenses.db` on first run. If a legacy `expenses.txt` file exists in the project directory, you will be prompted to migrate its data to the database.
+
+---
+
+## 🧩 Installation & Dependencies
+
+Install dependencies via pip:
+
+```bash
+pip install -r requirements.txt
+```
+
+Main packages used:
+
+- `tkinter` — GUI (bundled with Python)
+- `pillow` — Image handling
+- `pandas`, `matplotlib`, `seaborn` — Analysis & charts
+- `pytest` — Tests
+- `pyinstaller` — Packaging into Windows EXE (developer only)
+
+---
+
+## 💡 Usage Guide
+
+### Main Workflows
+
+- Add Expense: Main Menu → Add Expense → fill form → Save
+- View Expenses: Main Menu → View All Expenses → delete rows if needed
+- Analyze: Main Menu → Analyze Expenses → category totals and bar chart
+- Preferences: set timezone and timestamp display format (local/utc/custom/relative)
+
+Timestamps are stored as ISO-8601 UTC strings and displayed as configured (see `utils.format_iso_timestamp`).
+
+---
+
+## 🏗 Project Structure
+
+Key files:
+
+- `gui_expense_tracker.py` — Application entry point
+- `gui.py` — `ExpenseTrackerGUI` (Tkinter screens)
+- `storage.py` — Public storage API (keeps CSV-compatible function signatures)
+- `database.py` — `ExpenseDatabase` SQLite wrapper used by analysis and migration
+- `analysis.py` — Chart generation and aggregation helpers
+- `utils.py` — Helpers (resource_path, timestamp formatting)
+- `migrate_to_db.py` — CLI migration helper
+- `requirements.txt` — Python package dependencies
+- `tests/` & `test_*.py` — pytest suite
+
+---
+
+## 🧪 Testing
+
+Run the test suite locally:
+
+```bash
+python -m pytest -q
+# Expected: 84 passed
+```
+
+All tests passed locally during verification.
+
+---
+
+## 📦 Packaging & Release
+
+A Windows single-file executable is produced using PyInstaller. Build helper and a PowerShell script are included:
+
+- `build_exe.ps1` — wrapper to run PyInstaller with required `--add-data` flags
+- `utils.resource_path()` — helper so bundled assets (images, icons) are accessible when frozen
+
+Artifacts produced locally:
+
+- `dist/gui_expense_tracker.exe` (EXE)
+- `dist/gui_expense_tracker_v1.0.1.zip` (zipped EXE)
+
+Checksums (local build):
+
+- EXE SHA256: `042f62bac192a21bf36d47c39bfe068c4bae8316795f97a132eb7cc31c1f65f7`
+- ZIP SHA256: `55d0eb162c8b16854f372b6f79b8a086caa73fd34dc682a239dace90a3780dfc`
+
+Note: I attempted to push the `v1.0.1` tag and create the Release, but pushes for the new tag failed due to intermittent network errors; `v1.0.0` tag was pushed successfully earlier.
+
+If you want, I can publish the Release (attach the ZIP) if you provide a GitHub token (GITHUB_TOKEN env) or allow me to use `gh` on your machine.
+
+---
+
+## 🔀 Migration from CSV
+
+If you have a legacy `expenses.txt` CSV file, the app detects it and prompts you to migrate. Alternatively, use the CLI:
+
+```bash
+python migrate_to_db.py --path expenses.txt
+```
+
+Migration preserves timestamps and descriptions (including commas/newlines) and writes entries into `expenses.db`.
+
+---
+
+## ⚙️ Configuration
+
+User preferences are stored in `config.json` and include:
+
+- `timestamp_display`: `local`, `utc`, `custom`, `relative`
+- `timezone`: IANA zone name (e.g., `Europe/London`)
+
+---
+
+## 🛠 Troubleshooting
+
+- If the GUI fails to start: ensure `tkinter` is available (on Linux, install `python3-tk`).
+- If the PyInstaller EXE fails: ensure required runtime libs (Tk, matplotlib backends) are present and run the app from the console to view messages.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome — open a PR with a clear description and tests for new behavior.
+
+---
+
+## 📄 License
+
+MIT
+
+---
+
+If you'd like, I can also publish the GitHub Release and attach the v1.0.1 ZIP (requires network/token).
 
 ---
 
