@@ -38,7 +38,7 @@ class ExpenseDatabase:
             """)
             conn.commit()
     
-    def append_expense(self, category: str, amount: float, description: str) -> int:
+    def append_expense(self, category: str, amount: float, description: str, timestamp: str | None = None) -> int:
         """
         Add a new expense record to the database.
         
@@ -46,6 +46,7 @@ class ExpenseDatabase:
             category: Expense category
             amount: Expense amount (must be non-negative)
             description: Optional description
+            timestamp: Optional ISO-8601 timestamp string; if provided it will be used as the record timestamp
             
         Returns:
             ID of inserted record
@@ -67,10 +68,16 @@ class ExpenseDatabase:
         
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO expenses (category, amount, description)
-                VALUES (?, ?, ?)
-            """, (category, amount, description))
+            if timestamp is None:
+                cursor.execute("""
+                    INSERT INTO expenses (category, amount, description)
+                    VALUES (?, ?, ?)
+                """, (category, amount, description))
+            else:
+                cursor.execute("""
+                    INSERT INTO expenses (category, amount, description, timestamp)
+                    VALUES (?, ?, ?, ?)
+                """, (category, amount, description, timestamp))
             conn.commit()
             return cursor.lastrowid
     

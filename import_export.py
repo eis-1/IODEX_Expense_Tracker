@@ -158,11 +158,12 @@ class ImportExporter:
                 category = str(expense.get('category', '')).strip()
                 amount_str = str(expense.get('amount', '')).strip()
                 description = str(expense.get('description', '')).strip()
+                timestamp = expense.get('timestamp')
                 
                 if not category or not amount_str:
                     continue  # Skip incomplete entries
                 
-                db.append_expense(category, float(amount_str), description)
+                db.append_expense(category, float(amount_str), description, timestamp=timestamp)
                 imported_count += 1
             
             except (ValueError, TypeError, AttributeError):
@@ -170,15 +171,15 @@ class ImportExporter:
                 continue
         
         return imported_count
-    
+
     @staticmethod
     def detect_format(filepath: str) -> str:
         """
         Detect file format based on extension.
-        
+
         Args:
             filepath: Path to file
-            
+
         Returns:
             'csv', 'json', or 'unknown'
         """
@@ -188,3 +189,44 @@ class ImportExporter:
         elif ext == '.json':
             return 'json'
         return 'unknown'
+
+    @staticmethod
+    def import_from_legacy_csv(db: ExpenseDatabase, filepath: str) -> int:
+        """
+        Import expenses from the legacy CSV format used by `storage.py`.
+
+        Expected row format (no header):
+            Category, Amount, Description, [Timestamp]
+
+        Args:
+            db: ExpenseDatabase instance
+            filepath: Path to CSV file
+
+        Returns:
+            Number of records imported
+        """
+        imported_count = 0
+        with open(filepath, 'r', newline='', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            for parts in reader:
+                if len(parts) < 2:
+                    continue
+                try:
+                    category = parts[0]
+                    amount = float(parts[1])
+                    description = parts[2] if len(parts) >= 3 else ''
+                    timestamp = parts[3] if len(parts) >= 4 else None
+                    db.append_expense(category, amount, description, timestamp=timestamp)
+                    imported_count += 1
+                except (ValueError, TypeError):
+                    continue
+        return imported_count
+
+def migrate_legacy_to_db(src_path: str = 'expenses.txt', db_path: str = 'expenses.db') -> int:
+    """Migrate a legacy `expenses.txt` CSV into an SQLite database file.
+
+    Returns number of records imported.
+    """
+    db = ExpenseDatabase(db_path)
+    return ImportExporter.import_from_legacy_csv(db, src_path)
+

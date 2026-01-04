@@ -36,8 +36,34 @@ class ExpenseTrackerGUI:
         # Category options
         self.categories = ["Food", "Rent", "Utilities", "Shopping"]
         
-        # Display main menu
-        self.main_menu()
+        # Migration prompt: if expenses.txt exists and expenses.db does not, offer migration
+        import os
+        txt_path = "expenses.txt"
+        db_path = "expenses.db"
+        if os.path.exists(txt_path) and not os.path.exists(db_path):
+            self._show_migration_prompt(txt_path, db_path)
+        else:
+            # If DB exists, switch default to DB
+            if os.path.exists(db_path):
+                self.filepath = db_path
+            self.main_menu()
+
+    def _show_migration_prompt(self, txt_path, db_path):
+        def migrate():
+            try:
+                from import_export import migrate_legacy_to_db
+                migrate_legacy_to_db(src_path=txt_path, db_path=db_path)
+                self.filepath = db_path
+                tk.messagebox.showinfo("Migration", f"Expenses migrated to '{db_path}'. App will now use the database.")
+            except Exception as e:
+                tk.messagebox.showerror("Migration Failed", str(e))
+            self.main_menu()
+        self._clear_window()
+        tk.Label(self.root, text="Migrate to Database?", font=("Comic Sans MS", 16, "bold"), bg="#AED6F1").pack(pady=30)
+        tk.Label(self.root, text="A legacy expenses.txt file was found. Would you like to migrate your data to the new, faster expenses.db database?", wraplength=600, bg="#AED6F1", font=("Arial", 12)).pack(pady=10)
+        tk.Button(self.root, text="Migrate Now", bg="#58D68D", fg="white", command=migrate, font=("Arial", 12)).pack(pady=8)
+        tk.Button(self.root, text="Skip", bg="#EC7063", fg="white", command=self.main_menu, font=("Arial", 12)).pack(pady=8)
+        self._add_footer()
     
     def _setup_background(self):
         """
@@ -241,8 +267,10 @@ class ExpenseTrackerGUI:
         self._clear_window()
         
         if not storage.file_exists(self.filepath):
-            messagebox.showinfo("No Data", "No expenses to analyze.")
-            self.main_menu()
+            # Show a friendly message but keep a Back button on the analyze screen
+            tk.Label(self.root, text="No expenses to analyze.", font=("Comic Sans MS", 14, "normal"), bg="#AED6F1").pack(pady=20)
+            tk.Button(self.root, text="🔙 Back", bg="#D5DBDB", command=self.main_menu).pack(pady=10)
+            self._add_footer()
             return
         
         try:

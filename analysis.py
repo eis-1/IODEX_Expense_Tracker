@@ -53,10 +53,14 @@ def get_category_totals_db(db: ExpenseDatabase) -> dict:
 
 def create_category_chart(path: str = DEFAULT_FILENAME, top_n: int | None = None):
     """
-    Create an improved bar chart of total expenses by category (CSV mode).
+    Create an improved bar chart of total expenses by category.
+
+    This function supports both CSV files and SQLite databases. If `path` looks
+    like a SQLite database, category totals are fetched efficiently from the
+    database; otherwise the CSV file is read and aggregated.
 
     Args:
-        path: File path to read from (defaults to expenses.txt)
+        path: File path to read from (defaults to expenses.db)
         top_n: If provided, show only the top N categories
 
     Returns:
@@ -66,17 +70,30 @@ def create_category_chart(path: str = DEFAULT_FILENAME, top_n: int | None = None
         ValueError: If no expense data exists
     """
     try:
-        df = pd.read_csv(path, names=["Category", "Amount", "Description", "Timestamp"], 
-                        on_bad_lines='skip', quoting=csv.QUOTE_ALL)
+        # DB mode: use ExpenseDatabase to get totals directly
+        import storage as _storage
+        if _storage._is_sqlite_file(path):
+            db = ExpenseDatabase(path)
+            category_totals_map = db.get_category_totals()
+            if not category_totals_map:
+                raise ValueError("No expense data available for analysis.")
+            # Convert to Series sorted desc
+            category_totals = pd.Series(category_totals_map).sort_values(ascending=False)
+            if top_n is not None:
+                category_totals = category_totals.head(top_n)
+        else:
+            # CSV mode
+            df = pd.read_csv(path, names=["Category", "Amount", "Description", "Timestamp"], 
+                            on_bad_lines='skip', quoting=csv.QUOTE_ALL)
 
-        if df.empty:
-            raise ValueError("No expense data available for analysis.")
+            if df.empty:
+                raise ValueError("No expense data available for analysis.")
 
-        df["Amount"] = pd.to_numeric(df["Amount"], errors='coerce')
-        category_totals = df.groupby("Category")["Amount"].sum().sort_values(ascending=False)
+            df["Amount"] = pd.to_numeric(df["Amount"], errors='coerce')
+            category_totals = df.groupby("Category")["Amount"].sum().sort_values(ascending=False)
 
-        if top_n is not None:
-            category_totals = category_totals.head(top_n)
+            if top_n is not None:
+                category_totals = category_totals.head(top_n)
 
         # Modern style and palette
         sns.set_theme(style='whitegrid')
@@ -109,11 +126,21 @@ def create_category_chart_plotly(path: str = DEFAULT_FILENAME, top_n: int | None
     """
     try:
         import plotly.express as px
-        df = pd.read_csv(path, names=["Category", "Amount", "Description", "Timestamp"], on_bad_lines='skip', quoting=csv.QUOTE_ALL)
-        if df.empty:
-            raise ValueError("No expense data available for analysis.")
-        df["Amount"] = pd.to_numeric(df["Amount"], errors='coerce')
-        category_totals = df.groupby("Category")["Amount"].sum().reset_index().sort_values(by="Amount", ascending=False)
+        import storage as _storage
+        if _storage._is_sqlite_file(path):
+            db = ExpenseDatabase(path)
+            cat_map = db.get_category_totals()
+            if not cat_map:
+                raise ValueError("No expense data available for analysis.")
+            category_totals = pd.DataFrame.from_dict(cat_map, orient='index', columns=['Amount']).reset_index().rename(columns={'index':'Category'})
+            category_totals = category_totals.sort_values(by='Amount', ascending=False)
+        else:
+            df = pd.read_csv(path, names=["Category", "Amount", "Description", "Timestamp"], on_bad_lines='skip', quoting=csv.QUOTE_ALL)
+            if df.empty:
+                raise ValueError("No expense data available for analysis.")
+            df["Amount"] = pd.to_numeric(df["Amount"], errors='coerce')
+            category_totals = df.groupby("Category")["Amount"].sum().reset_index().sort_values(by="Amount", ascending=False)
+
         if top_n is not None:
             category_totals = category_totals.head(top_n)
         total = category_totals["Amount"].sum()
@@ -197,17 +224,29 @@ def create_category_chart_db(db: ExpenseDatabase):
 
 def get_summary_stats(path: str = DEFAULT_FILENAME) -> dict:
     """
-    Generate summary statistics for expense data (CSV mode).
-    
-    Args:
-        path: File path to read from (defaults to expenses.txt)
-    
+    Generate summary statistics for expense data.
+
+    Works for both CSV paths and SQLite DB paths.
+
     Returns:
         Dictionary with keys: 'total', 'average', 'count', 'max_category'
-        Returns None values if no expenses exist.
     """
+    import storage as _storage
+    # DB mode: use database-optimized statistics
+    if _storage._is_sqlite_file(path):
+        db = ExpenseDatabase(path)
+        stats = db.get_statistics()
+        by_category = stats.get('by_category', {}) if isinstance(stats, dict) else {}
+        max_category = max(by_category, key=by_category.get) if by_category else None
+        return {
+            'total': float(stats.get('total', 0.0)),
+            'average': float(stats.get('average', 0.0)),
+            'count': int(stats.get('count', 0)),
+            'max_category': max_category
+        }
+
+    # CSV fallback
     expenses = load_expenses(path)
-    
     if not expenses:
         return {
             'total': 0.0,
@@ -215,14 +254,14 @@ def get_summary_stats(path: str = DEFAULT_FILENAME) -> dict:
             'count': 0,
             'max_category': None
         }
-    
+
     amounts = [exp[1] for exp in expenses]
     category_totals = get_category_totals(path)
-    
+
     total = sum(amounts)
     average = total / len(amounts) if amounts else 0.0
     max_category = max(category_totals, key=category_totals.get) if category_totals else None
-    
+
     return {
         'total': total,
         'average': average,

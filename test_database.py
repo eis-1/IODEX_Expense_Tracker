@@ -9,6 +9,7 @@ import os
 import tempfile
 import json
 import sqlite3
+import csv
 from database import ExpenseDatabase
 from import_export import ImportExporter
 from backup import BackupManager
@@ -262,6 +263,25 @@ class TestImportExporter:
     def test_detect_format_unknown(self):
         """Test unknown format detection."""
         assert ImportExporter.detect_format("file.txt") == "unknown"
+
+    def test_import_from_legacy_csv(self, temp_db, temp_dir):
+        """Test importing from legacy no-header CSV (Category,Amount,Description,Timestamp)."""
+        csv_path = os.path.join(temp_dir, "legacy.txt")
+        with open(csv_path, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(["Food", "15.00", "Lunch", "2026-01-03T12:00:00+00:00"])
+            writer.writerow(["Rent", "500.00", "Monthly", "2026-01-03T12:00:01+00:00"])
+            writer.writerow(["Invalid", "notanumber", "Skip"])
+
+        db = ExpenseDatabase(temp_db)
+        imported = ImportExporter.import_from_legacy_csv(db, csv_path)
+
+        assert imported == 2
+        expenses = db.load_expenses()
+        # Confirm timestamps preserved in DB (as last element of tuple)
+        timestamps = [exp[4] for exp in expenses]
+        assert "2026-01-03T12:00:00+00:00" in timestamps
+        assert "2026-01-03T12:00:01+00:00" in timestamps
 
 
 class TestBackupManager:

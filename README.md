@@ -5,7 +5,7 @@
 ![Tests](https://img.shields.io/badge/Tests-80%20Passing-brightgreen)
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-blue)
 
-**IODEX** is a **professional-grade, single-user desktop expense tracker** built with Python and Tkinter. It combines a clean, intuitive GUI with robust CSV-based storage, comprehensive testing, and powerful features for managing personal finances.
+**IODEX** is a **professional-grade, single-user desktop expense tracker** built with Python and Tkinter. It now uses a modern SQLite database (`expenses.db`) for fast, reliable storage by default, with seamless migration from legacy CSV (`expenses.txt`).
 
 > **Perfect for**: Personal budgeting, expense tracking, financial analysis, and educational projects on GUI development and data persistence.
 
@@ -94,7 +94,7 @@ pip install -r requirements.txt
 python gui_expense_tracker.py
 ```
 
-✨ **That's it!** The app creates `expenses.txt` automatically on first save.
+✨ **That's it!** The app creates `expenses.db` automatically on first run. If a legacy `expenses.txt` file is found, you'll be prompted to migrate your data to the new database.
 
 ---
 
@@ -229,7 +229,7 @@ After launching, you'll see the **Main Menu**:
 
 1. **Click** `🔄 Reset Expenses` from main menu
 2. **Confirm** deletion (⚠️ cannot be undone)
-3. All expenses cleared from `expenses.txt`
+3. All expenses cleared from your current storage file (by default, `expenses.db`)
 
 ---
 
@@ -239,7 +239,7 @@ After launching, you'll see the **Main Menu**:
 IODEX_Expense_Tracker/
 ├── gui_expense_tracker.py          # 🚀 Application entry point
 ├── gui.py                          # 🎨 Tkinter GUI implementation
-├── storage.py                      # 💾 CSV persistence layer
+├── storage.py                      # 💾 Hybrid CSV/SQLite persistence layer
 ├── analysis.py                     # 📊 Data aggregation & charting
 ├── config.py                       # ⚙️  Config file management
 ├── utils.py                        # 🔧 Utilities & helpers
@@ -247,7 +247,8 @@ IODEX_Expense_Tracker/
 ├── backup.py                       # 🔄 Backup utilities
 ├── database.py                     # 🗄️  Database helpers
 │
-├── expenses.txt                    # 📝 Runtime data file (auto-created)
+├── expenses.db                     # 🗄️  SQLite database (default)
+├── expenses.txt                    # 📝 Legacy CSV data file (optional)
 ├── config.json                     # 🔐 User preferences (auto-created)
 ├── photo1.jpg                      # 🖼️  Background image (optional)
 │
@@ -272,21 +273,31 @@ IODEX_Expense_Tracker/
 
 ### File Descriptions
 
-| File                     | Purpose                                                |
-| ------------------------ | ------------------------------------------------------ |
-| `gui_expense_tracker.py` | Application launcher — runs the Tkinter event loop     |
-| `gui.py`                 | Main GUI class (`ExpenseTrackerGUI`) with all screens  |
-| `storage.py`             | CSV persistence — append, load, delete, clear expenses |
-| `analysis.py`            | Data aggregation and chart generation                  |
-| `config.py`              | Config file management — read/write `config.json`      |
-| `utils.py`               | Utilities — timestamps, formatting, validation         |
-| `import_export.py`       | CSV/JSON import-export helpers                         |
-| `backup.py`              | Backup and recovery utilities                          |
-| `database.py`            | Optional database schema helpers                       |
+| File                     | Purpose                                                              |
+| ------------------------ | -------------------------------------------------------------------- |
+| `gui_expense_tracker.py` | Application launcher — runs the Tkinter event loop                   |
+| `gui.py`                 | Main GUI class (`ExpenseTrackerGUI`) with all screens                |
+| `storage.py`             | Hybrid CSV/SQLite persistence — append, load, delete, clear expenses |
+| `analysis.py`            | Data aggregation and chart generation                                |
+| `config.py`              | Config file management — read/write `config.json`                    |
+| `utils.py`               | Utilities — timestamps, formatting, validation                       |
+| `import_export.py`       | CSV/JSON import-export helpers                                       |
+| `backup.py`              | Backup and recovery utilities                                        |
+| `database.py`            | Optional database schema helpers                                     |
 
 ---
 
-## 🧪 Testing
+## 🧪 Migration & Testing
+
+### Migrating Legacy Data
+
+If you have an old `expenses.txt` file, the app will prompt you to migrate your data to the new `expenses.db` database on first run. You can also migrate manually using the CLI tool:
+
+```bash
+python migrate_to_db.py --src expenses.txt --dst expenses.db
+```
+
+This will import all your legacy expenses into the database, preserving timestamps and descriptions.
 
 IODEX includes **comprehensive test coverage**:
 
@@ -355,7 +366,7 @@ pytest --cov=. --cov-report=html
 │  storage.py│analysis.py│config.py│utils.py
 ├──────────────────────────────────────────┤
 │       Data Persistence Layer             │
-│   CSV File (expenses.txt) | JSON         │
+│   SQLite DB (expenses.db) | CSV (legacy) │
 └──────────────────────────────────────────┘
 ```
 
@@ -455,7 +466,9 @@ Paris, Europe — GMT+1
 
 ## 📊 Data Format
 
-### Expenses CSV (expenses.txt)
+### Expenses Database (expenses.db)
+
+The default storage is now a SQLite database. Legacy CSV format is still supported for backward compatibility and migration.
 
 ```csv
 Food,15.50,Lunch at café,2026-01-03T12:30:00+00:00
@@ -471,13 +484,15 @@ Shopping,120.00,"Clothes and shoes",2026-01-01T09:15:00+00:00
 3. **Description** — Free text (safely handles special characters)
 4. **Timestamp** — ISO-8601 UTC format
 
-**Why CSV?**
+**Why SQLite?**
 
-- ✅ Human-readable and auditable
-- ✅ Standard format (import to Excel, Google Sheets)
-- ✅ Safe handling of special characters
-- ✅ No external database needed
-- ✅ Easy backup and portability
+- ✅ Fast, reliable, and scalable
+- ✅ Supports advanced queries and analysis
+- ✅ No manual file management needed
+- ✅ Easy migration from legacy CSV
+- ✅ Data integrity and atomic operations
+
+**CSV remains supported for legacy data and import/export.**
 
 ---
 
