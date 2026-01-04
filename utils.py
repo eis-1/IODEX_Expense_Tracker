@@ -1,6 +1,7 @@
 """
 Utility helpers for timestamp parsing and formatting.
 """
+
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from zoneinfo import available_timezones, ZoneInfo
@@ -8,20 +9,20 @@ from zoneinfo import available_timezones, ZoneInfo
 
 def build_timezone_registry():
     """Build an optimized timezone registry with GMT offsets and display names.
-    
+
     Returns a tuple (tz_list, tz_display_map) where:
     - tz_list: sorted list of all timezone codes
     - tz_display_map: dict mapping tz_code -> (display_name, gmt_offset_str)
     """
     try:
-        all_tzs = sorted([tz for tz in available_timezones() if '/' in tz])
+        all_tzs = sorted([tz for tz in available_timezones() if "/" in tz])
     except Exception:
         all_tzs = []
-    
+
     tz_display_map = {}
     # Use a reference datetime to compute offsets (Jan 3, 2026 12:00 UTC)
     ref_dt = datetime(2026, 1, 3, 12, 0, 0, tzinfo=timezone.utc)
-    
+
     for tz_code in all_tzs:
         try:
             zi = ZoneInfo(tz_code)
@@ -33,26 +34,26 @@ def build_timezone_registry():
                 total_secs = int(offset.total_seconds())
                 hours = total_secs // 3600
                 mins = (abs(total_secs) % 3600) // 60
-                sign = '+' if hours >= 0 else '-'
+                sign = "+" if hours >= 0 else "-"
                 if mins:
                     gmt_str = f"GMT{sign}{abs(hours)}:{mins:02d}"
                 else:
                     gmt_str = f"GMT{sign}{abs(hours)}" if hours != 0 else "GMT"
             # Pretty display: Region / City — GMT offset
-            parts = tz_code.split('/')
-            city = parts[-1].replace('_', ' ').title()
-            region = parts[-2].replace('_', ' ').title() if len(parts) > 1 else ''
+            parts = tz_code.split("/")
+            city = parts[-1].replace("_", " ").title()
+            region = parts[-2].replace("_", " ").title() if len(parts) > 1 else ""
             display_name = f"{region}/{city}" if region else city
             tz_display_map[tz_code] = (display_name, gmt_str)
         except Exception:
             # Skip invalid timezones
             pass
-    
+
     # Also add system and UTC
-    tz_list = ['system', 'UTC'] + all_tzs
-    tz_display_map['system'] = ('System Default', 'local')
-    tz_display_map['UTC'] = ('UTC', 'GMT+0')
-    
+    tz_list = ["system", "UTC"] + all_tzs
+    tz_display_map["system"] = ("System Default", "local")
+    tz_display_map["UTC"] = ("UTC", "GMT+0")
+
     return tz_list, tz_display_map
 
 
@@ -103,7 +104,13 @@ def humanize_relative(dt, now=None) -> str:
     return f"{s} {'ago' if past else 'from now'}"
 
 
-def format_iso_timestamp(iso_str: str, mode: str = 'local', custom_fmt: str = '%Y-%m-%d %H:%M:%S %Z', show_relative: bool = True, tz_name: str = 'system') -> str:
+def format_iso_timestamp(
+    iso_str: str,
+    mode: str = "local",
+    custom_fmt: str = "%Y-%m-%d %H:%M:%S %Z",
+    show_relative: bool = True,
+    tz_name: str = "system",
+) -> str:
     """Format an ISO timestamp according to mode and optionally append relative time.
 
     mode: 'local', 'utc', or 'custom'
@@ -122,14 +129,15 @@ def format_iso_timestamp(iso_str: str, mode: str = 'local', custom_fmt: str = '%
         return ""
 
     # Determine output datetime per requested mode and timezone
-    if mode == 'utc':
+    if mode == "utc":
         out_dt = dt.astimezone(timezone.utc)
         fmt = "%Y-%m-%d %H:%M:%S %Z"
     else:
         # Decide which tz to use: system, explicit tz_name, or local
-        if tz_name and tz_name != 'system':
+        if tz_name and tz_name != "system":
             try:
                 from zoneinfo import ZoneInfo
+
                 tzobj = ZoneInfo(tz_name)
                 out_dt = dt.astimezone(tzobj)
             except Exception:
@@ -137,7 +145,7 @@ def format_iso_timestamp(iso_str: str, mode: str = 'local', custom_fmt: str = '%
         else:
             out_dt = dt.astimezone()
 
-        if mode == 'custom':
+        if mode == "custom":
             fmt = custom_fmt
         else:
             fmt = custom_fmt if custom_fmt else "%Y-%m-%d %H:%M:%S %Z"
@@ -150,15 +158,24 @@ def format_iso_timestamp(iso_str: str, mode: str = 'local', custom_fmt: str = '%
     return formatted
 
 
-def sample_timezones(limit:int=10, include_system:bool=True) -> list:
+def sample_timezones(limit: int = 10, include_system: bool = True) -> list:
     """Return a short list of popular IANA timezones for quick selection.
 
     If available, uses zoneinfo.available_timezones(), otherwise falls back to a curated list.
     """
     try:
         from zoneinfo import available_timezones
-        tzs = sorted([tz for tz in available_timezones() if '/' in tz])
-        popular = ["UTC", "Europe/London", "America/New_York", "Europe/Paris", "Asia/Tokyo", "Asia/Shanghai", "Australia/Sydney"]
+
+        tzs = sorted([tz for tz in available_timezones() if "/" in tz])
+        popular = [
+            "UTC",
+            "Europe/London",
+            "America/New_York",
+            "Europe/Paris",
+            "Asia/Tokyo",
+            "Asia/Shanghai",
+            "Australia/Sydney",
+        ]
         # merge ensuring order and uniqueness
         ordered = [t for t in popular if t in tzs]
         for t in tzs:
@@ -166,10 +183,17 @@ def sample_timezones(limit:int=10, include_system:bool=True) -> list:
                 ordered.append(t)
         result = ordered[:limit]
         if include_system:
-            return (["system"] + result)
+            return ["system"] + result
         return result
     except Exception:
-        fallback = ["system", "UTC", "America/New_York", "Europe/London", "Asia/Tokyo", "Australia/Sydney"]
+        fallback = [
+            "system",
+            "UTC",
+            "America/New_York",
+            "Europe/London",
+            "Asia/Tokyo",
+            "Australia/Sydney",
+        ]
         return fallback[:limit]
 
 
@@ -180,14 +204,21 @@ def fuzzy_timezones(query: str, limit: int = 50) -> list:
     substring matches are not abundant.
     """
     import difflib
-    q = (query or '').strip().lower()
+
+    q = (query or "").strip().lower()
     if not q:
         return sample_timezones(limit=limit, include_system=True)
     try:
         from zoneinfo import available_timezones
-        all_tzs = sorted([tz for tz in available_timezones() if '/' in tz])
+
+        all_tzs = sorted([tz for tz in available_timezones() if "/" in tz])
     except Exception:
-        all_tzs = ["America/New_York", "Europe/London", "Asia/Tokyo", "Australia/Sydney"]
+        all_tzs = [
+            "America/New_York",
+            "Europe/London",
+            "Asia/Tokyo",
+            "Australia/Sydney",
+        ]
 
     # First prefer simple substring matches
     subs = [tz for tz in all_tzs if q in tz.lower()]
@@ -213,8 +244,9 @@ def resource_path(relative_path: str) -> str:
     """
     import sys
     import os
-    if getattr(sys, 'frozen', False):
-        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+
+    if getattr(sys, "frozen", False):
+        base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
     else:
         base_path = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base_path, relative_path)

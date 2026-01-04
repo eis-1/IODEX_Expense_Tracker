@@ -3,6 +3,7 @@ Storage module for expense data persistence.
 Supports both legacy CSV files and a modern SQLite backend.
 Functions keep the original CSV signatures so the GUI remains compatible.
 """
+
 import csv
 import sqlite3
 import os
@@ -19,14 +20,14 @@ def _is_sqlite_file(path: str) -> bool:
     - If the path ends with `.db` treat as SQLite.
     - If the file exists and its header matches the SQLite magic header, treat as SQLite.
     """
-    if path.lower().endswith('.db'):
+    if path.lower().endswith(".db"):
         return True
     if not os.path.exists(path):
         return False
     try:
-        with open(path, 'rb') as f:
+        with open(path, "rb") as f:
             header = f.read(16)
-            return header == b'SQLite format 3\x00'
+            return header == b"SQLite format 3\x00"
     except Exception:
         return False
 
@@ -52,7 +53,14 @@ def _get_connection(path: str = DEFAULT_FILENAME) -> sqlite3.Connection:
     conn.commit()
     return conn
 
-def append_expense(category: str, amount: float, description: str, path: str = DEFAULT_FILENAME, timestamp: str | None = None) -> None:
+
+def append_expense(
+    category: str,
+    amount: float,
+    description: str,
+    path: str = DEFAULT_FILENAME,
+    timestamp: str | None = None,
+) -> None:
     """
     Append a single expense record to the database.
 
@@ -175,10 +183,10 @@ def load_expenses(path: str = DEFAULT_FILENAME) -> List[Tuple[str, float, str, s
 def get_total_spent(path: str = DEFAULT_FILENAME) -> float:
     """
     Calculate total amount spent across all expenses.
-    
+
     Args:
         path: Database file path (defaults to expenses.db)
-    
+
     Returns:
         Total amount as float. Returns 0.0 if no expenses exist.
     """
@@ -200,6 +208,7 @@ def get_total_spent(path: str = DEFAULT_FILENAME) -> float:
         return sum(exp[1] for exp in expenses)
     except Exception:
         return 0.0
+
 
 def clear_expenses(path: str = DEFAULT_FILENAME) -> None:
     """
@@ -237,7 +246,9 @@ def file_exists(path: str = DEFAULT_FILENAME) -> bool:
         try:
             conn = sqlite3.connect(path)
             cursor = conn.cursor()
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='expenses'")
+            cursor.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='expenses'"
+            )
             result = cursor.fetchone()
             conn.close()
             return result is not None
@@ -246,7 +257,13 @@ def file_exists(path: str = DEFAULT_FILENAME) -> bool:
     return os.path.exists(path)
 
 
-def delete_expense(category: str, amount: float, description: str, timestamp: str | None = None, path: str = DEFAULT_FILENAME) -> bool:
+def delete_expense(
+    category: str,
+    amount: float,
+    description: str,
+    timestamp: str | None = None,
+    path: str = DEFAULT_FILENAME,
+) -> bool:
     """
     Delete the first matching expense. Supports both CSV and SQLite files.
     Matching by category, numeric amount (tolerance), description, and optional timestamp.
@@ -258,7 +275,7 @@ def delete_expense(category: str, amount: float, description: str, timestamp: st
         deleted = False
         rows = []
         try:
-            with open(path, 'r', newline='', encoding='utf-8') as f:
+            with open(path, "r", newline="", encoding="utf-8") as f:
                 reader = csv.reader(f)
                 for parts in reader:
                     if len(parts) < 3:
@@ -273,7 +290,13 @@ def delete_expense(category: str, amount: float, description: str, timestamp: st
                     desc = parts[2]
                     ts = parts[3] if len(parts) >= 4 else None
 
-                    if (not deleted and cat == category and abs(amt - float(amount)) < 1e-6 and desc == description and (timestamp is None or ts == timestamp)):
+                    if (
+                        not deleted
+                        and cat == category
+                        and abs(amt - float(amount)) < 1e-6
+                        and desc == description
+                        and (timestamp is None or ts == timestamp)
+                    ):
                         deleted = True
                         continue
                     rows.append(parts)
@@ -284,7 +307,7 @@ def delete_expense(category: str, amount: float, description: str, timestamp: st
             dirpath = os.path.dirname(path)
             if dirpath and not os.path.exists(dirpath):
                 os.makedirs(dirpath, exist_ok=True)
-            with open(path, 'w', newline='', encoding='utf-8') as f:
+            with open(path, "w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
                 for r in rows:
                     writer.writerow(r)
@@ -296,12 +319,17 @@ def delete_expense(category: str, amount: float, description: str, timestamp: st
             return False
         conn = _get_connection(path)
         cursor = conn.cursor()
-        cursor.execute("SELECT id, amount, timestamp FROM expenses WHERE category = ? AND description = ? ORDER BY id ASC", (category, description))
+        cursor.execute(
+            "SELECT id, amount, timestamp FROM expenses WHERE category = ? AND description = ? ORDER BY id ASC",
+            (category, description),
+        )
         candidates = cursor.fetchall()
         target_id = None
         for cid, amt, ts in candidates:
             try:
-                if abs(float(amt) - float(amount)) < 1e-6 and (timestamp is None or ts == timestamp):
+                if abs(float(amt) - float(amount)) < 1e-6 and (
+                    timestamp is None or ts == timestamp
+                ):
                     target_id = cid
                     break
             except Exception:
