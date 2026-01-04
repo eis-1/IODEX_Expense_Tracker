@@ -36,16 +36,20 @@ class ExpenseTrackerGUI:
         # Category options
         self.categories = ["Food", "Rent", "Utilities", "Shopping"]
         
-        # Migration prompt: if expenses.txt exists and expenses.db does not, offer migration
+        # Migration prompt: only run when using the default storage path
         import os
-        txt_path = "expenses.txt"
-        db_path = "expenses.db"
-        if os.path.exists(txt_path) and not os.path.exists(db_path):
-            self._show_migration_prompt(txt_path, db_path)
+        if filepath == DEFAULT_FILENAME:
+            txt_path = "expenses.txt"
+            db_path = "expenses.db"
+            if os.path.exists(txt_path) and not os.path.exists(db_path):
+                self._show_migration_prompt(txt_path, db_path)
+            else:
+                # If DB exists, switch default to DB
+                if os.path.exists(db_path):
+                    self.filepath = db_path
+                self.main_menu()
         else:
-            # If DB exists, switch default to DB
-            if os.path.exists(db_path):
-                self.filepath = db_path
+            # Non-default filepath provided (e.g., tests pass temp files) — don't prompt or auto-migrate
             self.main_menu()
 
     def _show_migration_prompt(self, txt_path, db_path):
@@ -73,7 +77,10 @@ class ExpenseTrackerGUI:
             Label widget containing the background
         """
         try:
-            image = Image.open("photo1.jpg").resize((700, 500), Image.Resampling.LANCZOS)
+            # Use resource_path so the image can be found when running from a PyInstaller bundle
+            from utils import resource_path
+            img_path = resource_path("photo1.jpg")
+            image = Image.open(img_path).resize((700, 500), Image.Resampling.LANCZOS)
             photo1 = ImageTk.PhotoImage(image)
             background_label = tk.Label(self.root, image=photo1)
             background_label.image = photo1  # Keep a reference

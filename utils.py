@@ -197,3 +197,24 @@ def fuzzy_timezones(query: str, limit: int = 50) -> list:
     # Otherwise use fuzzy matching
     scores = difflib.get_close_matches(q, all_tzs, n=limit, cutoff=0.1)
     return ["system", "UTC"] + scores
+
+
+# --- Resource helper for bundled apps (PyInstaller, etc.) ---
+def resource_path(relative_path: str) -> str:
+    """Return an absolute path to a bundled resource.
+
+    When running as a PyInstaller one-file executable, files added via
+    --add-data are extracted to a runtime temp folder accessible via
+    sys._MEIPASS. In normal mode, resources live next to this module.
+
+    Usage:
+        from utils import resource_path
+        image_path = resource_path('photo1.jpg')
+    """
+    import sys
+    import os
+    if getattr(sys, 'frozen', False):
+        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, relative_path)

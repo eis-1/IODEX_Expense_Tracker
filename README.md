@@ -357,6 +357,61 @@ pytest --cov=. --cov-report=html
 - **Execution Time**: < 10 seconds
 - **Coverage**: All core modules (storage, analysis, utils, gui)
 
+---
+
+## 📦 Creating a standalone Windows .exe (PyInstaller)
+
+You can create a single-file Windows executable using PyInstaller. The project already includes a small helper `utils.resource_path()` so packaged apps can locate assets like `photo1.jpg` at runtime.
+
+PowerShell one-liner (recommended from project root with virtualenv activated):
+
+```powershell
+# Install PyInstaller if needed
+python -m pip install --upgrade pyinstaller
+
+# Create a single-file, windowed executable and include the image asset
+pyinstaller --noconfirm --clean --onefile --windowed --add-data "photo1.jpg;." gui_expense_tracker.py
+```
+
+Or use the provided helper script:
+
+```powershell
+.\.\build_exe.ps1
+```
+
+Note:
+
+- The `--add-data "photo1.jpg;."` flag tells PyInstaller to include the image and extract it next to the app at runtime. On Windows the separator is `;`, on macOS/Linux use `:`.
+- If your app needs other data files, add them with additional `--add-data` flags (e.g., `--add-data "config.json;."`).
+
+Prebuilt Windows executable
+
+A prebuilt Windows executable and zip archive were created in this workspace for quick testing:
+
+- `dist/gui_expense_tracker.exe` — single-file executable built with PyInstaller
+- `dist/gui_expense_tracker.zip` — zipped EXE for easy download
+
+If you want this included as a GitHub release asset or attached to a PR, I can prepare and upload it for you.
+
+Resource helper (already added to `utils.py`):
+
+```python
+# utils.resource_path
+import sys, os
+
+def resource_path(relative_path: str) -> str:
+    """Return absolute path to bundled resource.
+
+    When running as a PyInstaller bundle, resources are available under
+    `sys._MEIPASS`. Otherwise resolve relative to the module.
+    """
+    if getattr(sys, 'frozen', False):
+        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, relative_path)
+```
+
 ### Test Files
 
 | File                      | Focus                                        | Coverage |
