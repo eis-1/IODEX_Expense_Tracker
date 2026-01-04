@@ -1,6 +1,6 @@
 IODEX Expense Tracker - Release Notes
 
-Version: 1.0.0 (migration-to-sqlite)
+Version: 1.0.1 (icon-update)
 Date: 2026-01-05
 
 Highlights:
@@ -13,8 +13,9 @@ Highlights:
 Build artifact:
 
 - File: `dist/gui_expense_tracker.exe`
-- ZIP: `dist/gui_expense_tracker.zip`
-- SHA256: `93e95992da20c56172cb1ba301b5d9360455ea4789a9d182b4db292a6760e87e`
+- ZIP: `dist/gui_expense_tracker_v1.0.1.zip`
+- SHA256 (exe): `042f62bac192a21bf36d47c39bfe068c4bae8316795f97a132eb7cc31c1f65f7`
+- SHA256 (zip): `55d0eb162c8b16854f372b6f79b8a086caa73fd34dc682a239dace90a3780dfc`
 
 Notes:
 
