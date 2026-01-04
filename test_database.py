@@ -35,7 +35,8 @@ def temp_dir():
     path = tempfile.mkdtemp()
     yield path
     # Cleanup
-    import shutil, time, sqlite3
+    import shutil
+    import time
 
     if os.path.exists(path):
         # Try to close any sqlite DB files in the directory to release locks
@@ -138,7 +139,7 @@ class TestExpenseDatabase:
         """Test deleting an expense."""
         db = ExpenseDatabase(temp_db)
         id1 = db.append_expense("Food", 10.00, "")
-        id2 = db.append_expense("Rent", 500.00, "")
+        db.append_expense("Rent", 500.00, "")
 
         deleted = db.delete_expense(id1)
         assert deleted
@@ -306,12 +307,12 @@ class TestBackupManager:
         db.append_expense("Food", 15.00, "Lunch")
 
         manager = BackupManager(temp_db, temp_dir)
-        backup1 = manager.create_backup("First backup")
+        manager.create_backup("First backup")
         # Small delay to ensure different timestamps
         import time
 
         time.sleep(0.1)
-        backup2 = manager.create_backup("Second backup")
+        manager.create_backup("Second backup")
 
         backups = manager.list_backups()
         assert len(backups) >= 2

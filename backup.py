@@ -3,7 +3,6 @@ Backup module for automated database backups.
 Supports creating, managing, and restoring database backups.
 """
 
-import shutil
 import os
 import sqlite3
 from datetime import datetime, timedelta
@@ -81,7 +80,7 @@ class BackupManager:
         Returns:
             List of tuples: (backup_path, timestamp, file_size, description)
         """
-        backups = []
+        backups: List[Tuple[str, str, int, str]] = []
 
         if not os.path.exists(self.backup_dir):
             return backups
@@ -92,7 +91,7 @@ class BackupManager:
                 file_size = os.path.getsize(backup_path)
 
                 # Extract timestamp from filename
-                # Format: expenses_backup_YYYYMMDD_HHMMSS.db
+                # Format: expenses_backup_YYYYMMDD_HHMMSS[_ffffff].db
                 timestamp = filename.replace("expenses_backup_", "").replace(".db", "")
 
                 # Read description from metadata
@@ -103,11 +102,10 @@ class BackupManager:
                         with open(metadata_path, "r") as f:
                             for line in f:
                                 if line.startswith("Description:"):
-                                    description = line.replace(
-                                        "Description:", ""
-                                    ).strip()
+                                    description = line.replace("Description:", "").strip()
                                     break
-                    except:
+                    except Exception:
+                        # Ignoring metadata read errors
                         pass
 
                 backups.append((backup_path, timestamp, file_size, description))
@@ -116,7 +114,7 @@ class BackupManager:
 
     def restore_backup(self, backup_path: str) -> None:
         """
-        Restore database from a backup.
+        Restore a specific backup.
 
         Args:
             backup_path: Path to the backup file to restore
@@ -129,7 +127,7 @@ class BackupManager:
 
         try:
             # Create a safety backup before restoring
-            safety_backup = self.create_backup("Safety backup before restore")
+            self.create_backup("Safety backup before restore")
 
             # Ensure any open connections are closed before restoring
             try:
@@ -172,7 +170,7 @@ class BackupManager:
                 os.remove(metadata_path)
 
             return True
-        except:
+        except Exception:
             return False
 
     def cleanup_old_backups(self, days: int = 30, keep_minimum: int = 3) -> int:
@@ -202,7 +200,7 @@ class BackupManager:
                 if backup_datetime < cutoff_date:
                     if self.delete_backup(backup_path):
                         deleted_count += 1
-            except:
+            except Exception:
                 continue
 
         return deleted_count
@@ -237,7 +235,7 @@ class BackupManager:
                 "created": created_time.isoformat(),
                 "record_count": record_count,
             }
-        except:
+        except Exception:
             return {"error": "Could not read backup information"}
 
     def automatic_backup(self, description: str = "Automatic backup") -> str:

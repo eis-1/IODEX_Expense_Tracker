@@ -2,8 +2,6 @@
 Tests for Plotly integration in analysis module.
 """
 
-import os
-import tempfile
 from analysis import create_category_chart_plotly
 
 

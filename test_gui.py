@@ -3,7 +3,6 @@ GUI tests for preferences and timestamp display. Uses headless Tkinter.
 """
 
 import os
-import tempfile
 import tkinter as tk
 import pytest
 from gui import ExpenseTrackerGUI

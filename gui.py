@@ -838,7 +838,7 @@ def run_application(filepath: str = DEFAULT_FILENAME):
         filepath: Path to expense storage file (defaults to expenses.txt)
     """
     root = tk.Tk()
-    app = ExpenseTrackerGUI(root, filepath)
+    ExpenseTrackerGUI(root, filepath)
     root.mainloop()
 
 

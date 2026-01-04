@@ -4,11 +4,10 @@ Generates charts and summary statistics for expense data.
 Supports both CSV (legacy) and SQLite (current) storage backends.
 """
 
-import pandas as pd
+import pandas as pd  # type: ignore[import]
 import matplotlib.pyplot as plt
-import seaborn as sns
+import seaborn as sns  # type: ignore[import]
 import csv
-import os
 from storage import load_expenses, DEFAULT_FILENAME
 from database import ExpenseDatabase
 
@@ -29,7 +28,7 @@ def get_category_totals(path: str = DEFAULT_FILENAME) -> dict:
     if not expenses:
         return {}
 
-    category_totals = {}
+    category_totals: dict[str, float] = {}
     for category, amount, *_ in expenses:
         if category in category_totals:
             category_totals[category] += amount
@@ -144,7 +143,7 @@ def create_category_chart_plotly(
     Create an interactive Plotly bar chart (returns a Plotly Figure)
     """
     try:
-        import plotly.express as px
+        import plotly.express as px  # type: ignore[import]
         import storage as _storage
 
         if _storage._is_sqlite_file(path):
@@ -208,7 +207,7 @@ def open_interactive_chart(
     Returns the path to the generated HTML file.
     """
     fig = create_category_chart_plotly(path, top_n=top_n)
-    import plotly.offline as pyo
+    import plotly.offline as pyo  # type: ignore[import]
     import tempfile
 
     tmp = tempfile.NamedTemporaryFile(suffix=".html", delete=False)
@@ -218,7 +217,7 @@ def open_interactive_chart(
     if auto_open:
         # Prefer an embedded window using pywebview if available
         try:
-            import webview
+            import webview  # type: ignore[import]
 
             # Create a webview window in a non-blocking fashion
             def _open():
@@ -291,7 +290,10 @@ def get_summary_stats(path: str = DEFAULT_FILENAME) -> dict:
         db = ExpenseDatabase(path)
         stats = db.get_statistics()
         by_category = stats.get("by_category", {}) if isinstance(stats, dict) else {}
-        max_category = max(by_category, key=by_category.get) if by_category else None
+        # Use a safe lambda for the key function to appease type checkers
+        max_category = (
+            max(by_category, key=lambda k: by_category.get(k, 0.0)) if by_category else None
+        )
         return {
             "total": float(stats.get("total", 0.0)),
             "average": float(stats.get("average", 0.0)),
@@ -310,7 +312,9 @@ def get_summary_stats(path: str = DEFAULT_FILENAME) -> dict:
     total = sum(amounts)
     average = total / len(amounts) if amounts else 0.0
     max_category = (
-        max(category_totals, key=category_totals.get) if category_totals else None
+        max(category_totals, key=lambda k: category_totals.get(k, 0.0))
+        if category_totals
+        else None
     )
 
     return {

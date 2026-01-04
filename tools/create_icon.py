@@ -1,10 +1,14 @@
+from typing import Any
+
 from PIL import Image, ImageDraw, ImageFont
 
 # Create a placeholder background image
 img = Image.new("RGB", (700, 500), color=(70, 130, 180))
 d = ImageDraw.Draw(img)
 try:
-    font = ImageFont.truetype("arial.ttf", 72)
+    # PIL's ImageFont.truetype can return types that mypy has trouble inferring
+    # Use a broad Any annotation to satisfy type checker while keeping runtime behavior
+    font: Any = ImageFont.truetype("arial.ttf", 72)  # type: ignore[assignment]
 except Exception:
     font = ImageFont.load_default()
 text = "IODEX"

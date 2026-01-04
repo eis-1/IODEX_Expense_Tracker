@@ -1,5 +1,4 @@
 import csv
-import os
 from matplotlib.figure import Figure
 
 import matplotlib

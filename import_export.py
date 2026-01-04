@@ -7,7 +7,6 @@ import csv
 import json
 import os
 from datetime import datetime, timezone
-from typing import List, Tuple
 
 from database import ExpenseDatabase
 
@@ -96,7 +95,6 @@ class ImportExporter:
             if reader.fieldnames is None:
                 raise ValueError("CSV file is empty")
 
-            required_cols = {"Category", "Amount", "Description"}
             csv_cols = set(reader.fieldnames)
 
             # Be flexible with column names
@@ -120,7 +118,7 @@ class ImportExporter:
                     db.append_expense(category, float(amount_str), description)
                     imported_count += 1
 
-                except (ValueError, KeyError) as e:
+                except (ValueError, KeyError):
                     # Skip malformed rows, continue importing
                     continue
 

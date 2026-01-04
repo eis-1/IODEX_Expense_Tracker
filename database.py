@@ -5,8 +5,7 @@ Provides robust local database with atomic transactions and schema management.
 
 import sqlite3
 import os
-from datetime import datetime
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 
 DEFAULT_DB_PATH = "expenses.db"
 
@@ -94,7 +93,12 @@ class ExpenseDatabase:
                     (category, amount, description, timestamp),
                 )
             conn.commit()
-            return cursor.lastrowid
+            # cursor.lastrowid can be Optional[int]; ensure we return int
+            last_id = cursor.lastrowid
+            if last_id is None:
+                # Unexpected: insertion did not produce a row id
+                raise sqlite3.Error("Failed to obtain inserted row id")
+            return int(last_id)
 
     def load_expenses(self) -> List[Tuple[int, str, float, str, str]]:
         """
