@@ -1,3 +1,138 @@
+# GUI Expense Tracker
+
+A simple, self-contained personal expense tracker with a Tkinter GUI, CSV import/export, SQLite storage, analysis helpers, and optional packaged executables.
+
+This repository contains the source code, tests, build scripts, and helper tools used to develop and distribute the GUI Expense Tracker application.
+
+## Key features
+
+- Record, edit and delete expenses stored in a local SQLite database
+- Import and export CSV files for exchange with other tools
+- Backup/restore utilities for the app database (`backup.py`)
+- Analysis helpers and chart generation (`analysis.py`)
+- A Tkinter-based GUI (`gui.py`, `gui_expense_tracker.py`) with tests that are CI-friendly
+- Packaging support via PyInstaller (spec: `gui_expense_tracker.spec`, helper script `build_exe.ps1`)
+
+## Repository layout (important files)
+
+- `gui_expense_tracker.py` — application entry point
+- `gui.py` — GUI implementation and helpers
+- `database.py` — database layer and migrations
+- `backup.py` — backup and restore utilities
+- `import_export.py` — CSV import/export helpers
+- `analysis.py` — aggregation and chart helpers
+- `storage.py` — persistence helpers
+- `tools/create_icon.py` — helper used during builds
+- `requirements.txt` — Python dependencies
+- `dist/` — packaging outputs (binaries / zip archives)
+
+## Requirements
+
+- Python 3.10+ (development used 3.14)
+- Virtual environment recommended
+- Dev tools: `mypy`, `ruff`, `pytest`
+
+## Quick start (development)
+
+1. Create and activate a virtual environment
+
+```powershell
+python -m venv .venv
+& ".venv/Scripts/Activate.ps1"
+```
+
+2. Install dependencies
+
+```powershell
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+3. Run the GUI
+
+```powershell
+python gui_expense_tracker.py
+```
+
+4. Run the test suite
+
+```powershell
+python -m pytest -q
+```
+
+## Linting and type checking
+
+```powershell
+python -m ruff check .
+python -m mypy .
+```
+
+## Packaging (PyInstaller)
+
+Use the included spec or the helper script to build a Windows executable:
+
+```powershell
+python -m pip install --upgrade pyinstaller
+pyinstaller --clean --noconfirm gui_expense_tracker.spec
+```
+
+Artifacts will appear in `dist/`. These can be large; consider Git LFS when tracking them.
+
+## Creating a GitHub Release (recommended via `gh` CLI)
+
+Install and authenticate the GitHub CLI if needed, then create a release attaching your build artifacts:
+
+```powershell
+winget install --id GitHub.cli -e
+gh auth login
+
+gh release create v1.0.1 dist/gui_expense_tracker.exe dist/gui_expense_tracker_v1.0.1.zip --title "v1.0.1" --notes-file RELEASE_NOTES.md
+```
+
+Or upload assets manually from the GitHub Releases page in the web UI.
+
+## Backups
+
+Use `backup.py` to create and restore backups of the SQLite database before performing migrations or destructive operations.
+
+## Tests and CI
+
+- Tests are implemented with `pytest` and have been designed to be headless-friendly for CI (GUI tests avoid creating a top-level `tk.Tk()` unless necessary).
+- Run tests with:
+
+```powershell
+python -m pytest -q
+```
+
+## Contributing
+
+1. Fork the repository and create a feature branch
+2. Run linters and tests locally
+3. Open a pull request with a clear description and tests for new behavior
+
+## Troubleshooting
+
+- If a module import fails, ensure your virtualenv is active and `requirements.txt` installed.
+- Packaging creates large files; use Git LFS to avoid bloating git history.
+
+## License
+
+Add a `LICENSE` file to the repository root to declare the project's license. If none is present the project is provided without a license (restricts reuse).
+
+## Contact
+
+Open an issue in this repository for bugs, questions or feature requests.
+
+---
+
+If you want any of the following additions, tell me which and I'll update the `README.md` accordingly:
+
+- Short Quick Start with screenshots
+- Detailed developer setup (pre-commit hooks, editor config)
+- Example CSVs and sample commands for import/export
+
+Also happy to shorten or expand any section to match your preferred tone.
+
 ### Workflow 2: Viewing Expenses
 
 1. **Click** `📋 View All Expenses`

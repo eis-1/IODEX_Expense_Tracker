@@ -55,7 +55,7 @@ def test_preferences_persist_and_affect_display(tmp_path):
 
 
 def test_preferences_preview_updates(tmp_path):
-    # Use temp config and open preferences
+    # Use temp config and test preview text computation
     cfg_path = os.path.join(tmp_path, "config.json")
     config.save_config(
         {
@@ -65,14 +65,6 @@ def test_preferences_preview_updates(tmp_path):
         },
         path=cfg_path,
     )
-
-    try:
-        root = tk.Tk()
-        root.withdraw()
-    except tk.TclError:
-        pytest.skip("Tkinter not available in this environment")
-    app = ExpenseTrackerGUI(root)
-    app.config = config.load_config(path=cfg_path)
 
     # Use the compute_preview_text helper to avoid needing a real Tk in the test
     preview = ExpenseTrackerGUI.compute_preview_text(
