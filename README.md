@@ -2,6 +2,13 @@
 
 A simple, self-contained personal expense tracker with a Tkinter GUI, CSV import/export, SQLite storage, analysis helpers, and optional packaged executables.
 
+**Author:** MD EAFTEKHIRUL ISLAM © 2026 · License: MIT (`LICENSE`)
+
+[📘 Developer Guidelines](DEVELOPER_GUIDELINES.md) — follow this for contributing, testing, and release steps.
+
+A simple, self-contained personal expense tracker with a Tkinter GUI, CSV import/export, SQLite storage, analysis helpers, and optional packaged executables.
+A simple, self-contained personal expense tracker with a Tkinter GUI, CSV import/export, SQLite storage, analysis helpers, and optional packaged executables.
+
 This repository contains the source code, tests, build scripts, and helper tools used to develop and distribute the GUI Expense Tracker application.
 
 ## Key features
@@ -234,7 +241,7 @@ IODEX_Expense_Tracker/
 ├── test_utils_fuzzy.py             # 🧪 Fuzzy parsing tests
 │
 ├── .github/
-│   └── copilot-instructions.md     # 🤖 AI coding guidelines
+│   └── DEVELOPER_GUIDELINES.md     # 👩‍💻 Developer guidelines
 │
 └── .git/                           # 🔗 Git repository
 ```
