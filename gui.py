@@ -620,18 +620,68 @@ class ExpenseTrackerGUI:
             self._add_footer()
             return
 
-        # Show a quick loading message so the UI doesn't look frozen.
-        loading = tk.Label(
+        # ---- Clean, user-friendly Analyze screen layout ----
+        tk.Label(
             self.root,
-            text="⏳ Generating chart… Please wait",
-            font=("Arial", 12, "bold"),
+            text="📊 Analyze Expenses",
+            font=self.title_font,
+            bg="#AED6F1",
+        ).pack(pady=(15, 5))
+        tk.Label(
+            self.root,
+            text="Spending by category (matplotlib)",
+            font=self.label_font,
+            bg="#AED6F1",
+            fg="#1a5490",
+        ).pack(pady=(0, 10))
+
+        content = tk.Frame(self.root, bg="#AED6F1")
+        content.pack(expand=True, fill="both", padx=20, pady=10)
+
+        # Status / progress area
+        status = tk.Frame(content, bg="#AED6F1")
+        status.pack(fill="x", pady=(10, 10))
+
+        status_label = tk.Label(
+            status,
+            text="Generating chart… please wait",
+            font=("Arial", 11, "bold"),
             bg="#AED6F1",
         )
-        loading.pack(pady=20)
+        status_label.pack(anchor="w")
 
-        # Provide an immediate Back button (and satisfy headless GUI tests)
+        progress = ttk.Progressbar(status, mode="indeterminate")
+        progress.pack(fill="x", pady=(6, 0))
+        progress.start(12)
+
+        # Chart placeholder
+        chart_container = tk.Frame(content, bg="#AED6F1")
+        chart_container.pack(expand=True, fill="both")
+
+        # Action buttons (disabled until chart is ready)
+        action = tk.Frame(self.root, bg="#AED6F1")
+        action.pack(pady=(0, 5))
+
+        export_btn = tk.Button(
+            action,
+            text="⬇ Export Image",
+            bg="#AED6F1",
+            font=self.button_font,
+            state="disabled",
+        )
+        export_btn.pack(side="left", padx=6)
+
+        interactive_btn = tk.Button(
+            action,
+            text="🌐 Open Interactive Chart",
+            bg="#AED6F1",
+            font=self.button_font,
+            state="disabled",
+        )
+        interactive_btn.pack(side="left", padx=6)
+
+        # Back button should be available immediately (tests + UX)
         def _back_now():
-            # If chart rendering was scheduled, cancel it.
             job = getattr(self, "_analysis_job", None)
             if job is not None:
                 try:
@@ -645,8 +695,10 @@ class ExpenseTrackerGUI:
             self.root,
             text="🔙 Back",
             bg="#D5DBDB",
+            font=self.button_font,
             command=_back_now,
-        ).pack(pady=10)
+        ).pack(pady=(5, 10))
+
         self._add_footer()
         self.root.update_idletasks()
 
@@ -654,49 +706,53 @@ class ExpenseTrackerGUI:
             try:
                 fig = analysis.create_category_chart(self.filepath)
 
-                # Remove loading message once chart is ready
-                if loading.winfo_exists():
-                    loading.destroy()
-
                 # Lazy import matplotlib to speed up startup
                 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-                canvas = FigureCanvasTkAgg(fig, master=self.root)
-                canvas.draw()
-                canvas.get_tk_widget().pack(pady=20)
+                # Stop/remove progress UI
+                try:
+                    progress.stop()
+                except Exception:
+                    pass
+                if status.winfo_exists():
+                    status.destroy()
 
-                tk.Button(
-                    self.root,
-                    text="⬇ Export Image",
-                    bg="#AED6F1",
+                canvas = FigureCanvasTkAgg(fig, master=chart_container)
+                canvas.draw()
+                canvas.get_tk_widget().pack(expand=True, fill="both")
+
+                export_btn.configure(
+                    state="normal",
                     command=lambda: self._export_chart(fig),
-                ).pack(pady=2)
-                tk.Button(
-                    self.root,
-                    text="🌐 Open Interactive Chart",
-                    bg="#AED6F1",
+                )
+                interactive_btn.configure(
+                    state="normal",
                     command=lambda: analysis.open_interactive_chart(self.filepath),
-                ).pack(pady=2)
-                # Back button to return to main menu
-                tk.Button(
-                    self.root, text="🔙 Back", bg="#D5DBDB", command=self.main_menu
-                ).pack(pady=10)
-                self._add_footer()
+                )
+                logger.info("Chart generated successfully")
 
             except ValueError as e:
                 logger.warning("Chart generation failed: %s", e)
-                if loading.winfo_exists():
-                    loading.destroy()
+                try:
+                    progress.stop()
+                except Exception:
+                    pass
+                if status.winfo_exists():
+                    status.destroy()
                 messagebox.showerror("Error", str(e))
                 self.main_menu()
             except Exception:
                 logger.exception("Unexpected error during chart generation")
-                if loading.winfo_exists():
-                    loading.destroy()
+                try:
+                    progress.stop()
+                except Exception:
+                    pass
+                if status.winfo_exists():
+                    status.destroy()
                 messagebox.showerror("Error", "Unexpected error while generating the chart.")
                 self.main_menu()
 
-        # Let Tk render the loading label first, then generate.
+        # Let Tk paint the UI first, then generate.
         self._analysis_job = self.root.after(50, _render_chart)
 
     def _export_chart(self, fig):
