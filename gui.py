@@ -6,9 +6,13 @@ Handles all user interface rendering and interaction logic.
 import tkinter as tk
 from tkinter import messagebox, ttk
 from PIL import Image, ImageTk
+import logging
 import storage
 from storage import DEFAULT_FILENAME
 import analysis
+
+
+logger = logging.getLogger(__name__)
 
 
 class ExpenseTrackerGUI:
@@ -181,7 +185,7 @@ class ExpenseTrackerGUI:
             background_label = tk.Label(self.root, image=self._bg_image)
             background_label.image = self._bg_image  # Keep a reference
         except Exception as e:
-            print("Background image error:", e)
+            logger.exception("Background image load failed")
             # Solid color fallback - modern gradient-like color
             background_label = tk.Label(self.root, bg="#E8F4F8")
         
@@ -616,35 +620,84 @@ class ExpenseTrackerGUI:
             self._add_footer()
             return
 
-        try:
-            fig = analysis.create_category_chart(self.filepath)
+        # Show a quick loading message so the UI doesn't look frozen.
+        loading = tk.Label(
+            self.root,
+            text="⏳ Generating chart… Please wait",
+            font=("Arial", 12, "bold"),
+            bg="#AED6F1",
+        )
+        loading.pack(pady=20)
 
-            # Lazy import matplotlib to speed up startup
-            from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-            canvas = FigureCanvasTkAgg(fig, master=self.root)
-            canvas.draw()
-            canvas.get_tk_widget().pack(pady=20)
-
-            tk.Button(
-                self.root,
-                text="⬇ Export Image",
-                bg="#AED6F1",
-                command=lambda: self._export_chart(fig),
-            ).pack(pady=2)
-            tk.Button(
-                self.root,
-                text="🌐 Open Interactive Chart",
-                bg="#AED6F1",
-                command=lambda: analysis.open_interactive_chart(self.filepath),
-            ).pack(pady=2)
-            # Back button to return to main menu
-            tk.Button(
-                self.root, text="🔙 Back", bg="#D5DBDB", command=self.main_menu
-            ).pack(pady=10)
-
-        except ValueError as e:
-            messagebox.showerror("Error", str(e))
+        # Provide an immediate Back button (and satisfy headless GUI tests)
+        def _back_now():
+            # If chart rendering was scheduled, cancel it.
+            job = getattr(self, "_analysis_job", None)
+            if job is not None:
+                try:
+                    self.root.after_cancel(job)
+                except Exception:
+                    pass
+                self._analysis_job = None
             self.main_menu()
+
+        tk.Button(
+            self.root,
+            text="🔙 Back",
+            bg="#D5DBDB",
+            command=_back_now,
+        ).pack(pady=10)
+        self._add_footer()
+        self.root.update_idletasks()
+
+        def _render_chart():
+            try:
+                fig = analysis.create_category_chart(self.filepath)
+
+                # Remove loading message once chart is ready
+                if loading.winfo_exists():
+                    loading.destroy()
+
+                # Lazy import matplotlib to speed up startup
+                from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+                canvas = FigureCanvasTkAgg(fig, master=self.root)
+                canvas.draw()
+                canvas.get_tk_widget().pack(pady=20)
+
+                tk.Button(
+                    self.root,
+                    text="⬇ Export Image",
+                    bg="#AED6F1",
+                    command=lambda: self._export_chart(fig),
+                ).pack(pady=2)
+                tk.Button(
+                    self.root,
+                    text="🌐 Open Interactive Chart",
+                    bg="#AED6F1",
+                    command=lambda: analysis.open_interactive_chart(self.filepath),
+                ).pack(pady=2)
+                # Back button to return to main menu
+                tk.Button(
+                    self.root, text="🔙 Back", bg="#D5DBDB", command=self.main_menu
+                ).pack(pady=10)
+                self._add_footer()
+
+            except ValueError as e:
+                logger.warning("Chart generation failed: %s", e)
+                if loading.winfo_exists():
+                    loading.destroy()
+                messagebox.showerror("Error", str(e))
+                self.main_menu()
+            except Exception:
+                logger.exception("Unexpected error during chart generation")
+                if loading.winfo_exists():
+                    loading.destroy()
+                messagebox.showerror("Error", "Unexpected error while generating the chart.")
+                self.main_menu()
+
+        # Let Tk render the loading label first, then generate.
+        self._analysis_job = self.root.after(50, _render_chart)
 
     def _export_chart(self, fig):
         """Export the current matplotlib figure to a PNG file."""

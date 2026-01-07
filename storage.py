@@ -37,7 +37,20 @@ def _get_connection(path: str = DEFAULT_FILENAME) -> sqlite3.Connection:
     dirpath = os.path.dirname(path) if os.path.dirname(path) else "."
     if dirpath and not os.path.exists(dirpath):
         os.makedirs(dirpath, exist_ok=True)
-    conn = sqlite3.connect(path)
+    # Timeout helps prevent 'database is locked' errors during brief contention.
+    conn = sqlite3.connect(path, timeout=30)
+
+    # Crash-safety / durability settings.
+    # WAL improves resilience on unexpected shutdowns and reduces writer/reader contention.
+    # synchronous=NORMAL is a good balance for desktop apps (FULL is slower but stricter).
+    try:
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA synchronous=NORMAL;")
+        conn.execute("PRAGMA foreign_keys=ON;")
+    except Exception:
+        # If PRAGMA fails (rare), continue with SQLite defaults.
+        pass
+
     cursor = conn.cursor()
     cursor.execute(
         """
