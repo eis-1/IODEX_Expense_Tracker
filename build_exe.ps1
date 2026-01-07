@@ -12,6 +12,10 @@ if (Test-Path -Path "gui_expense_tracker.spec") { Remove-Item -Force gui_expense
 
 # 3) Run PyInstaller to create a single-file, windowed executable
 # Note: --add-data uses a ';' separator on Windows: "source;dest"
-pyinstaller --noconfirm --clean --onefile --windowed --add-data "photo1.jpg;." gui_expense_tracker.py
+pyinstaller --noconfirm --clean --onefile --windowed `
+    --name "IODEX_Expense_Tracker" `
+    --icon "app.ico" `
+    --add-data "photo1.jpg;." `
+    gui_expense_tracker.py
 
-Write-Host "Build finished. Check the 'dist' folder for gui_expense_tracker.exe"
+Write-Host "Build finished. Check the 'dist' folder for IODEX_Expense_Tracker.exe"

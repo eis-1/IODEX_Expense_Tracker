@@ -243,10 +243,23 @@ def resource_path(relative_path: str) -> str:
         image_path = resource_path('photo1.jpg')
     """
     import sys
-    import os
+    from pathlib import Path
 
-    if getattr(sys, "frozen", False):
-        base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    if not relative_path:
+        raise ValueError("relative_path must be a non-empty string")
+
+    rel = Path(relative_path)
+    # If caller already passed an absolute path, keep it.
+    if rel.is_absolute():
+        return str(rel)
+
+    # PyInstaller sets sys._MEIPASS to the extraction folder for onefile builds.
+    # For onedir builds, sys.frozen may be True and sys._MEIPASS may also exist.
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        base = Path(getattr(sys, "_MEIPASS"))
     else:
-        base_path = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(base_path, relative_path)
+        # Source/dev mode: resources live next to this module (project root in this repo).
+        base = Path(__file__).resolve().parent
+
+    # Resolve to a normalized absolute path (do not require existence).
+    return str((base / rel).resolve(strict=False))

@@ -1,5 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+# PyInstaller spec for IODEX Expense Tracker
+# Note: keep this conservative for compatibility with pandas/plotly/matplotlib.
 
 a = Analysis(
     ['gui_expense_tracker.py'],

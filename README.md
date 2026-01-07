@@ -272,11 +272,19 @@ For detailed testing information, see [TESTING_GUIDE.md](TESTING_GUIDE.md).
 # Install PyInstaller
 pip install pyinstaller
 
-# Build using spec file
-pyinstaller --clean --noconfirm gui_expense_tracker.spec
+# Recommended: build a single-file, windowed EXE with bundled assets
+# IMPORTANT: --add-data uses a ';' separator on Windows: "source;dest"
+pyinstaller --noconfirm --clean --onefile --windowed `
+  --name "IODEX_Expense_Tracker" `
+  --icon "app.ico" `
+  --add-data "photo1.jpg;." `
+  gui_expense_tracker.py
 
 # Or use the build script
 .\build_exe.ps1
+
+# Or build from the spec file (advanced)
+pyinstaller --clean --noconfirm gui_expense_tracker.spec
 ```
 
 The executable will be created in the `dist/` directory.
@@ -289,6 +297,25 @@ The [gui_expense_tracker.spec](gui_expense_tracker.spec) file includes:
 - Data file inclusion (icons, images)
 - Windows-specific optimizations
 - Hidden imports handling
+
+### Troubleshooting PyInstaller (pandas/plotly/matplotlib)
+
+If the EXE builds but crashes with missing-module errors, PyInstaller may need help discovering imports.
+
+Common fixes:
+
+- **See exactly what's missing**:
+  - Build with: `--debug=imports`
+- **Add explicit hidden imports** (repeat as needed):
+  - `--hidden-import <module.name>`
+- **Collect submodules (useful for pandas/plotly)**:
+  - `--collect-submodules pandas`
+  - `--collect-submodules plotly`
+- **Collect package data files** (plotly and some chart tooling may require this):
+  - `--collect-data plotly`
+  - `--collect-all plotly`
+
+Tip: if you end up adding many hidden imports, put them into `gui_expense_tracker.spec` so your build stays reproducible.
 
 ---
 
